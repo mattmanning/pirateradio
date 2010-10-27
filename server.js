@@ -53,8 +53,8 @@ var EARTH_RADIUS = 6378137.0;
 var subscribers = {}
 function subscriber_for(id) {
   var subscriber = subscribers[id];
-  if (!subscriber) { 
-    subscribers[id] = subscriber = redis.createClient(); 
+  if (!subscriber) {
+    subscribers[id] = subscriber = redis.createClient();
     subscriber.select(2);
   }
   return subscriber;
@@ -76,8 +76,7 @@ app.post('/position', function(request, response) {
           console.log('subscribe to: ' + row[0]);
           var listener = request.identity;
           var poster   = row[0];
-          redis_sub.subscribeTo('queue:' + poster, function(channel, msg) {
-            queue_for()
+          subscriber_for(listener).subscribeTo(poster, function(channel, msg) {
             console.log('listener: ' + listener);
             console.log('poster:   ' + poster);
             console.log('channel:  ' + channel);
@@ -90,7 +89,7 @@ app.post('/position', function(request, response) {
           console.log('tell subscribe to: ' + row[0]);
           var listener = row[0];
           var poster   = request.identity;
-          redis_sub.subscribeTo('queue:' + poster, function(channel, msg) {
+          subscriber_for(poster).subscribeTo(listener, function(channel, msg) {
             console.log('listener: ' + listener);
             console.log('poster:   ' + poster);
             console.log('channel:  ' + channel);
