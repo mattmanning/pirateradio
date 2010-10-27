@@ -3,6 +3,7 @@ require.paths.unshift('lib');
 var auth     = require('connect-auth');
 var identity = require('connect-identity');
 var io       = require('socket.io');
+var log      = require('log');
 var express  = require('express');
 var postgres = require('postgres');
 var redis    = require('redis');
@@ -13,21 +14,12 @@ var MemoryStore = require('connect/middleware/session/memory');
 
 var pgdb = postgres.createConnection("host='' dbname='pirateradio'")
 
-//var redis_sub = redis.createClient();
-//redis_sub.select(2);
-
 function pretty(id) {
   return id.substring(0, 6);
 }
 
-var redis_pub = redis.createClient();
-redis_pub.select(2);
-
-// redis_sub.on("message", function(channel, message) {
-//   console.log('wee4');
-//   console.log('channel: ' + sys.inspect(channel));
-//   console.log('message: ' + sys.inspect(JSON.parse(message)));
-// });
+var publisher = redis.createClient();
+publisher.select(2);
 
 var app = express.createServer(
   express.bodyDecoder(),
@@ -43,43 +35,45 @@ var sockets = {};
 
 socket.on('connection', function(client) {
   express.cookieDecoder()(client.request, client.response, function(){});
-  var id = client.request.cookies['_pirate_radio_id'];
-  sockets[id] = client;
+  var identity = client.request.cookies['_pirate_radio_id'];
+  log('socket.connection', { identity:pretty(identity) });
 
-  user.lookup(id, function(user) {
+  user.lookup_by_identity(identity, function(user) {
     update_position(user);
+
+    sockets[user.id] = client;
+
+    client.on('message', function(message) {
+      var message = JSON.parse(message);
+
+      log('socket.message', { id:pretty(user.id), type:message.type })
+
+      switch (message.type) {
+        case 'message':
+          log('socket.message.message', { from:user.id, text:message.message });
+          publisher.publish(user.id, JSON.stringify({
+            from: user.id,
+            text: message.message
+          }));
+          break;
+      }
+    })
+
+    client.on('disconnect', function() {
+      console.log('socket.disconnect', { id:pretty(user.id) })
+      
+      console.log("delete from locations where id = '" + user.id + "'");
+      pgdb.query("delete from locations where id = '" + user.id + "'");
+      delete sockets[user.id];
+      
+      if (subscribers[user.id]) {
+        subscribers[user.id].subs.forEach(function(to) {
+          subscriber_for(to).unsub(user.id);      
+        });
+        delete subscribers[user.id];
+      }
+    })
   });
-
-  console.log('id is: ' + pretty(id));
-  //console.log('connected, client is: ' + sys.inspect(client));
-  //identity
-  client.on('message', function(message) {
-    var message = JSON.parse(message);
-
-    console.log('id is: ' + pretty(id));
-    console.log('message is: ' + sys.inspect(message));
-    console.log('type: ' + message.type);
-    switch (message.type) {
-      case 'message':
-        console.log('hi');
-        redis_pub.publish(id, JSON.stringify({
-          from: id,
-          text: message.message
-        }));
-        break;
-    }
-  })
-
-  client.on('disconnect', function() {
-    express.cookieDecoder()(this.request, this.response, function(){});
-    console.log("delete from locations where id = '" + id + "'");
-    pgdb.query("delete from locations where id = '" + id + "'");
-    delete sockets[id];
-    subscribers[id].subs.forEach(function(to) {
-      subscriber_for(to).unsub(id);      
-    });
-    delete subscribers[id];
-  })
 });
 
 var twitter = require('twitter-connect').createClient({
@@ -163,14 +157,14 @@ function update_position(user) {
 
   console.log('found [' + pretty(user.identity) + '] position [' + latitude + ',' + longitude + ']');
 
-  pgdb.query("delete from locations where id = '" + user.identity + "'");
+  pgdb.query("delete from locations where id = '" + user.id + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
-    "'" + user.identity + "',1609,now()," +
+    "'" + user.id + "',1609,now()," +
     "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));",
     function(error) {
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.identity + "';", function(error, rows) {
         rows.forEach(function(row) {
-          var listener = user.identity;
+          var listener = user.id;
           var poster   = row[0];
           subscriber_for(listener).sub(poster);
         })
@@ -178,7 +172,7 @@ function update_position(user) {
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.identity + "';", function(error, rows) {
         rows.forEach(function(row) {
           var listener = row[0];
-          var poster   = user.identity;
+          var poster   = user.id;
           var subscriber = subscriber_for(listener);
           subscriber_for(listener).sub(poster);
         })
@@ -190,6 +184,7 @@ function update_position(user) {
 app.post('/position', function(request, response) {
   var latitude  = parseFloat(request.body.latitude);
   var longitude = parseFloat(request.body.longitude);
+  log('post.position', { lat:latitude, long:longitude });
 
   request.user.update({
     position: {
@@ -198,19 +193,21 @@ app.post('/position', function(request, response) {
     }
   });
 
+  console.log(sys.inspect(request.user));
+
   update_position(request.user);
 
   response.send('thanks');
 });
 
-app.post('/message', function(request, response) {
-  console.log('publishing: ' + request.body.text);
-  redis_pub.publish(request.identity, JSON.stringify({
-    from: request.identity,
-    text: request.body.text
-  }));
-  response.send('thanks');
-});
+// app.post('/message', function(request, response) {
+//   console.log('publishing: ' + request.body.text);
+//   publisher.publish(request.identity, JSON.stringify({
+//     from: request.identity,
+//     text: request.body.text
+//   }));
+//   response.send('thanks');
+// });
 
 app.get('/assets/:name.css', function(request, response) {
   var sass = __dirname + '/assets/styles/' + request.params.name + '.sass';
