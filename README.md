@@ -3,13 +3,17 @@
 ## Installation
 
     brew install node npm
+    npm install bounce
+    npm install connect-identity
+    npm install couchdb
+    npm install cradle
     npm install express
     npm install haml
-    npm install bounce
+    npm install oauth
+    npm install postgres
+    npm install sass
     npm install twitter-connect
-    npm install connect-identity
-    npm install cradle
-    
+
 ## Setting up NPM
 
     export NODE_PATH="/usr/local/lib/node"

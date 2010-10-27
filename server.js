@@ -4,6 +4,7 @@ var auth     = require('connect-auth');
 var identity = require('connect-identity');
 var express  = require('express');
 var postgres = require('postgres');
+var redis    = require('redis-node');
 var sys      = require('sys');
 var user     = require('user');
 
