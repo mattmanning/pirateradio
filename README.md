@@ -4,6 +4,7 @@
 
     brew install node npm
     npm install bounce
+    npm install connect-auth
     npm install connect-identity
     npm install couchdb
     npm install cradle
@@ -11,6 +12,7 @@
     npm install haml
     npm install oauth
     npm install postgres
+    npm install redis-node
     npm install sass
     npm install twitter-connect
 
