@@ -24,8 +24,14 @@ $(window).ready(function() {
 
     socket.on('message', function(data) {
       var message = JSON.parse(data);
-      $('#chat').append('[' + message.from + '] ' + message.message + '\n');
-      $('#chat').scrollTop($('#chat')[0].scrollHeight);
+      console.log('foo');
+      console.log(message);
+      switch(message.type) {
+        case 'message':
+          $('#log').append('[' + message.from + '] ' + message.message + '\n');
+          $('#log').scrollTop($('#log')[0].scrollHeight);
+          break;
+      }
     });
 
     socket.on('disconnect', function(data) {

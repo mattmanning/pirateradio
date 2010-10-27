@@ -1,6 +1,10 @@
 body
   :margin 0
   :padding 0
+  :overflow hidden
+
+#content
+  :overflow none
 
 #header
   :background #4d4c4d
@@ -47,22 +51,24 @@ body
     &:active
       :background-image -webkit-gradient(linear, 30% 30%, 30% 100%, from(#829dbb), to(#aed3fb))
       :background -moz-linear-gradient(-90deg, #829dbb, #aed3fb)
-#content
-  :float left
-  :width 100%
-  :margin 0
-  :padding 0
 #map
-  :clear left
-  :float left;
-  :padding 0
-  :margin 0
-  :display inline
-#chat
-  :float right
-  :width 300px
-  :padding 20px 0
-  :margin: 0 3% 0 0
-  :display inline
+  :position absolute
+  :top 79px
+  :bottom 0
+  :left 0
+  :right -400px
+#log
   :background #eee
+  :position absolute
+  :top 76px
+  :right 0
+  :bottom 100px
+  :width 400px
+#entry
+  :position absolute
+  :background #ddd
+  :right 0
+  :width 400px
+  :bottom 0
+  :height 100px
 

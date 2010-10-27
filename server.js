@@ -41,6 +41,8 @@ socket.on('connection', function(client) {
   user.lookup_by_identity(identity, function(user) {
     update_position(user);
 
+    log('socket.connection.store', { id:user.id });
+
     sockets[user.id] = client;
 
     client.on('message', function(message) {
@@ -125,11 +127,15 @@ function subscriber_for(id) {
     }
     subscriber.on("message", function(channel, message) {
       var message = JSON.parse(message);
+      log('subscriber.message', message);
       user.lookup(message.from, function(user) {
+        log('subscriber.message.user', { id:user.id });
+
         var from = user.auth ? user.auth.name : 'Anonymous';
 
-        var socket = sockets[id];
+        var socket = sockets[user.id];
         if (socket) {
+          
           console.log('sending to: ' + pretty(id));
           socket.send(JSON.stringify({
             type:'message',
@@ -138,10 +144,6 @@ function subscriber_for(id) {
           }))
         }
       });
-
-      console.log('channel: ' + sys.inspect(channel));
-      console.log('id: ' + pretty(this.id));
-      console.log('message: ' + sys.inspect(message));
     });
   }
   return subscriber;
