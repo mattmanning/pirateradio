@@ -4,13 +4,14 @@ var auth     = require('connect-auth');
 var identity = require('connect-identity');
 var express  = require('express');
 var postgres = require('postgres');
-var redis    = require('redis-node');
 var sys      = require('sys');
 var user     = require('user');
 
 var MemoryStore = require('connect/middleware/session/memory');
 
 var pgdb = postgres.createConnection("host='' dbname='pirateradio'")
+
+var redis = require('redis-node').createClient(/* TODO: redis host */).select(2);
 
 var app = express.createServer(
   express.bodyDecoder(),
@@ -44,6 +45,13 @@ app.get('/auth/twitter', function(request, response) {
 
 var EARTH_RADIUS = 6378137.0;
 
+var redis_queues = {};
+
+function queue_for(id) {
+  var queue = redis_queues[id];
+  if (!queue) { queue = redis_queues[id] = }
+  redis_queues
+}
 app.post('/position', function(request, response) {
   var latitude  = parseFloat(request.body.latitude);
   var longitude = parseFloat(request.body.longitude);
@@ -58,13 +66,27 @@ app.post('/position', function(request, response) {
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + request.identity + "';", function(error, rows) {
         rows.forEach(function(row) {
           console.log('subscribe to: ' + row[0]);
-          // subscribe to row[0]
+          var listener = request.identity;
+          var poster   = row[0];
+          redis.subscribe('queue:' + poster, function(channel, msg) {
+            console.log('listener: ' + listener);
+            console.log('poster:   ' + poster);
+            console.log('channel:  ' + channel);
+            console.log('msg:      ' + msg);
+          });
         })
       });
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + request.identity + "';", function(error, rows) {
         rows.forEach(function(row) {
           console.log('tell subscribe to: ' + row[0]);
-          // tell row[0] to subscribe to me
+          var listener = row[0];
+          var poster   = request.identity;
+          redis.subscribe('queue:' + poster, function(channel, msg) {
+            console.log('listener: ' + listener);
+            console.log('poster:   ' + poster);
+            console.log('channel:  ' + channel);
+            console.log('msg:      ' + msg);
+          });
         })
       });
     }

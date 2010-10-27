@@ -1,5 +1,9 @@
 $(window).ready(function() {
   locate_user();
+
+  window.setInterval(function() {
+    $.post('/message', { text: 'hey there!' });
+  }, 500);
 });
 
 function locate_user() {
@@ -8,7 +12,7 @@ function locate_user() {
     navigator.geolocation.getCurrentPosition(position_success, position_error);
   } else {
     console.log('geolocation not supported');
-  }  
+  }
 }
 
 function position_success(position) {
@@ -16,7 +20,7 @@ function position_success(position) {
 
   var coords = {
     latitude:  position.coords.latitude,
-    longitude: position.coords.longitude    
+    longitude: position.coords.longitude
   }
 
   $.post('/position', coords, function(data) {
