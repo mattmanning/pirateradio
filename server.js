@@ -55,6 +55,7 @@ function subscriber_for(id) {
   var subscriber = subscribers[id];
   if (!subscriber) {
     subscribers[id] = subscriber = redis.createClient();
+    subscriber.id = id;
     subscriber.select(2);
   }
   return subscriber;
@@ -106,11 +107,17 @@ app.post('/position', function(request, response) {
       longitude: longitude
     }
   });
+  
+  response.send('thanks');
 });
 
 app.post('/message', function(request, response) {
   console.log('publishing: ' + request.body.text);
-  redis_pub.publish('queue:' + request.identity, request.body.text);
+  redis_pub.publish(request.identity, JSON.stringify({
+    from: request.identity,
+    text: request.body.text
+  }));
+  response.send('thanks');
 });
 
 app.get('/assets/:name.css', function(request, response) {
