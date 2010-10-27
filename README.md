@@ -12,6 +12,7 @@
     npm install haml
     npm install oauth
     npm install postgres
+    npm install redis
     npm install redis-node
     npm install sass
     npm install socket.io
