@@ -14,6 +14,7 @@
     npm install postgres
     npm install redis-node
     npm install sass
+    npm install socket.io
     npm install twitter-connect
 
 ## Setting up NPM

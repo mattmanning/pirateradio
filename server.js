@@ -2,6 +2,7 @@ require.paths.unshift('lib');
 
 var auth     = require('connect-auth');
 var identity = require('connect-identity');
+var io       = require('socket.io');
 var express  = require('express');
 var postgres = require('postgres');
 var redis    = require('redis');
@@ -15,8 +16,12 @@ var pgdb = postgres.createConnection("host='' dbname='pirateradio'")
 //var redis_sub = redis.createClient();
 //redis_sub.select(2);
 
+function pretty(id) {
+  return id.substring(0, 6);
+}
+
 var redis_pub = redis.createClient();
-//redis_pub.select(2);
+redis_pub.select(2);
 
 // redis_sub.on("message", function(channel, message) {
 //   console.log('wee4');
@@ -29,8 +34,50 @@ var app = express.createServer(
   express.cookieDecoder(),
   express.session(),
   identity({ cookie: '_pirate_radio_id' }),
-  user({ host: 'localhost', port: 5984 })
+  user.middleware({ host: 'localhost', port: 5984 })
 );
+
+var socket = io.listen(app);
+
+var sockets = {};
+
+socket.on('connection', function(client) {
+  express.cookieDecoder()(client.request, client.response, function(){});
+  var id = client.request.cookies['_pirate_radio_id'];
+  sockets[id] = client;
+
+  user.lookup(id, function(user) {
+    update_position(user);
+  });
+
+  console.log('id is: ' + pretty(id));
+  //console.log('connected, client is: ' + sys.inspect(client));
+  //identity
+  client.on('message', function(message) {
+    var message = JSON.parse(message);
+
+    console.log('id is: ' + pretty(id));
+    console.log('message is: ' + sys.inspect(message));
+    console.log('type: ' + message.type);
+    switch (message.type) {
+      case 'message':
+        console.log('hi');
+        redis_pub.publish(id, JSON.stringify({
+          from: id,
+          text: message.message
+        }));
+        break;
+    }
+  })
+
+  client.on('disconnect', function() {
+    express.cookieDecoder()(this.request, this.response, function(){});
+    console.log("delete from locations where id = '" + id + "'");
+    pgdb.query("delete from locations where id = '" + id + "'");
+    delete sockets[id];
+    delete subscribers[id];
+  })
+});
 
 var twitter = require('twitter-connect').createClient({
   consumerKey:    'SL0d7ouDmx4HbjKrx3Cp9Q',
@@ -48,6 +95,7 @@ app.get('/', function(request, response) {
 app.get('/auth/twitter', function(request, response) {
   twitter.authorize(request, response, function(error, api) {
     api.get('/account/verify_credentials.json', function(error, data) {
+      console.log('ERROR: ' + error);
       request.user.update({ auth: { type:'twitter', name:data.screen_name }})
       response.redirect('/');
     });
@@ -65,55 +113,66 @@ function subscriber_for(id) {
     subscriber.select(2);
     subscriber.on("message", function(channel, message) {
       var message = JSON.parse(message);
+      user.lookup(message.from, function(user) {
+        var from = user.auth ? user.auth.name : 'Anonymous';
+
+        var socket = sockets[id];
+        if (socket) {
+          console.log('sending to: ' + pretty(id));
+          socket.send(JSON.stringify({
+            type:'message',
+            from:from,
+            message:message.text
+          }))
+        }
+      });
+
       console.log('channel: ' + sys.inspect(channel));
-      console.log('id: ' + this.id);
+      console.log('id: ' + pretty(this.id));
       console.log('message: ' + sys.inspect(message));
     });
   }
   return subscriber;
 }
 
-app.post('/position', function(request, response) {
-  var latitude  = parseFloat(request.body.latitude);
-  var longitude = parseFloat(request.body.longitude);
+function update_position(user) {
+  if (!user.position) return;
 
-  console.log('found position [' + latitude + ',' + longitude + ']');
+  console.log('id: ' + user.identity);
 
-  pgdb.query("delete from locations where id = '" + request.identity + "'");
+  var latitude = user.position.latitude;
+  var longitude = user.position.longitude;
+
+  console.log('found [' + pretty(user.identity) + '] position [' + latitude + ',' + longitude + ']');
+
+  pgdb.query("delete from locations where id = '" + user.identity + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
-    "'" + request.identity + "',1609,now()," +
+    "'" + user.identity + "',1609,now()," +
     "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));",
     function(error) {
-      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + request.identity + "';", function(error, rows) {
+      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.identity + "';", function(error, rows) {
         rows.forEach(function(row) {
-          console.log('subscribe to: ' + row[0]);
-          var listener = request.identity;
+          var listener = user.identity;
           var poster   = row[0];
           subscriber_for(listener).subscribe(poster);
-          // subscriber_for(listener).subscribeTo(poster, function(channel, msg) {
-          //   console.log('listener: ' + listener);
-          //   console.log('poster:   ' + poster);
-          //   console.log('channel:  ' + channel);
-          //   console.log('msg:      ' + msg);
-          // });
+          console.log(pretty(listener) + ' subscribing to ' + pretty(poster));
         })
       });
-      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + request.identity + "';", function(error, rows) {
+      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.identity + "';", function(error, rows) {
         rows.forEach(function(row) {
-          console.log('tell subscribe to: ' + row[0]);
           var listener = row[0];
-          var poster   = request.identity;
-          subscriber_for(poster).subscribe(listener);
-          // subscriber_for(poster).subscribeTo(listener, function(channel, msg) {
-          //   console.log('listener: ' + listener);
-          //   console.log('poster:   ' + poster);
-          //   console.log('channel:  ' + channel);
-          //   console.log('msg:      ' + msg);
-          // });
+          var poster   = user.identity;
+          subscriber_for(listener).subscribe(poster);
+          console.log(pretty(listener) + ' subscribing to ' + pretty(poster));            
         })
       });
     }
   );
+}
+
+app.post('/position', function(request, response) {
+  var latitude  = parseFloat(request.body.latitude);
+  var longitude = parseFloat(request.body.longitude);
 
   request.user.update({
     position: {
@@ -121,7 +180,9 @@ app.post('/position', function(request, response) {
       longitude: longitude
     }
   });
-  
+
+  update_position(request.user);
+
   response.send('thanks');
 });
 
