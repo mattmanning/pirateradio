@@ -45,13 +45,6 @@ app.get('/auth/twitter', function(request, response) {
 
 var EARTH_RADIUS = 6378137.0;
 
-var redis_queues = {};
-
-function queue_for(id) {
-  var queue = redis_queues[id];
-  if (!queue) { queue = redis_queues[id] = }
-  redis_queues
-}
 app.post('/position', function(request, response) {
   var latitude  = parseFloat(request.body.latitude);
   var longitude = parseFloat(request.body.longitude);
@@ -98,6 +91,11 @@ app.post('/position', function(request, response) {
       longitude: longitude
     }
   });
+});
+
+app.post('message', function(request, response) {
+  console.log('publishing: ' + request.params.message);
+  redis.publish('queue:' + request.identity, request.params.message);
 });
 
 app.get('/assets/:name.css', function(request, response) {

@@ -2,6 +2,7 @@ $(window).ready(function() {
   locate_user();
 
   window.setInterval(function() {
+    console.log('posting');
     $.post('/message', { text: 'hey there!' });
   }, 500);
 });
