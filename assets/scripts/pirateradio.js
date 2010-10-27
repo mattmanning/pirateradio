@@ -4,7 +4,7 @@ $(window).ready(function() {
   window.setInterval(function() {
     console.log('posting');
     $.post('/message', { text: 'hey there!' });
-  }, 500);
+  }, 2000);
 });
 
 function locate_user() {

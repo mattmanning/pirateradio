@@ -4,6 +4,7 @@ var auth     = require('connect-auth');
 var identity = require('connect-identity');
 var express  = require('express');
 var postgres = require('postgres');
+var redis    = require('redis-node');
 var sys      = require('sys');
 var user     = require('user');
 
@@ -11,7 +12,11 @@ var MemoryStore = require('connect/middleware/session/memory');
 
 var pgdb = postgres.createConnection("host='' dbname='pirateradio'")
 
-var redis = require('redis-node').createClient(/* TODO: redis host */).select(2);
+var redis_sub = redis.createClient();
+redis_sub.select(2);
+
+var redis_pub = redis.createClient();
+redis_pub.select(2);
 
 var app = express.createServer(
   express.bodyDecoder(),
@@ -45,6 +50,16 @@ app.get('/auth/twitter', function(request, response) {
 
 var EARTH_RADIUS = 6378137.0;
 
+var subscribers = {}
+function subscriber_for(id) {
+  var subscriber = subscribers[id];
+  if (!subscriber) { 
+    subscribers[id] = subscriber = redis.createClient(); 
+    subscriber.select(2);
+  }
+  return subscriber;
+}
+
 app.post('/position', function(request, response) {
   var latitude  = parseFloat(request.body.latitude);
   var longitude = parseFloat(request.body.longitude);
@@ -61,7 +76,8 @@ app.post('/position', function(request, response) {
           console.log('subscribe to: ' + row[0]);
           var listener = request.identity;
           var poster   = row[0];
-          redis.subscribe('queue:' + poster, function(channel, msg) {
+          redis_sub.subscribeTo('queue:' + poster, function(channel, msg) {
+            queue_for()
             console.log('listener: ' + listener);
             console.log('poster:   ' + poster);
             console.log('channel:  ' + channel);
@@ -74,7 +90,7 @@ app.post('/position', function(request, response) {
           console.log('tell subscribe to: ' + row[0]);
           var listener = row[0];
           var poster   = request.identity;
-          redis.subscribe('queue:' + poster, function(channel, msg) {
+          redis_sub.subscribeTo('queue:' + poster, function(channel, msg) {
             console.log('listener: ' + listener);
             console.log('poster:   ' + poster);
             console.log('channel:  ' + channel);
@@ -93,9 +109,9 @@ app.post('/position', function(request, response) {
   });
 });
 
-app.post('message', function(request, response) {
-  console.log('publishing: ' + request.params.message);
-  redis.publish('queue:' + request.identity, request.params.message);
+app.post('/message', function(request, response) {
+  console.log('publishing: ' + request.body.text);
+  redis_pub.publish('queue:' + request.identity, request.body.text);
 });
 
 app.get('/assets/:name.css', function(request, response) {
