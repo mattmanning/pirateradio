@@ -75,6 +75,9 @@ socket.on('connection', function(client) {
     console.log("delete from locations where id = '" + id + "'");
     pgdb.query("delete from locations where id = '" + id + "'");
     delete sockets[id];
+    subscribers[id].subs.forEach(function(to) {
+      subscriber_for(to).unsub(id);      
+    });
     delete subscribers[id];
   })
 });
@@ -109,8 +112,23 @@ function subscriber_for(id) {
   var subscriber = subscribers[id];
   if (!subscriber) {
     subscribers[id] = subscriber = redis.createClient();
+    subscriber.subs = [];
     subscriber.id = id;
     subscriber.select(2);
+    subscriber.sub = function(to) {
+      if (this.subs.indexOf(to) == -1) {        
+        console.log(pretty(this.id) + ' subscribing to ' + pretty(to));            
+        this.subscribe(to);
+        this.subs.push(to);
+      }
+    }
+    subscriber.unsub = function(to) {
+      if (this.subs.indexOf(to) != -1) {
+        console.log(pretty(this.id) + ' unsubscribing from ' + pretty(to));            
+        this.unsubscribe(to);
+        this.subs.splice(this.subs.indexOf(to));
+      }
+    }
     subscriber.on("message", function(channel, message) {
       var message = JSON.parse(message);
       user.lookup(message.from, function(user) {
@@ -154,16 +172,15 @@ function update_position(user) {
         rows.forEach(function(row) {
           var listener = user.identity;
           var poster   = row[0];
-          subscriber_for(listener).subscribe(poster);
-          console.log(pretty(listener) + ' subscribing to ' + pretty(poster));
+          subscriber_for(listener).sub(poster);
         })
       });
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.identity + "';", function(error, rows) {
         rows.forEach(function(row) {
           var listener = row[0];
           var poster   = user.identity;
-          subscriber_for(listener).subscribe(poster);
-          console.log(pretty(listener) + ' subscribing to ' + pretty(poster));            
+          var subscriber = subscriber_for(listener);
+          subscriber_for(listener).sub(poster);
         })
       });
     }
