@@ -12,11 +12,17 @@ var MemoryStore = require('connect/middleware/session/memory');
 
 var pgdb = postgres.createConnection("host='' dbname='pirateradio'")
 
-var redis_sub = redis.createClient();
-redis_sub.select(2);
+//var redis_sub = redis.createClient();
+//redis_sub.select(2);
 
 var redis_pub = redis.createClient();
-redis_pub.select(2);
+//redis_pub.select(2);
+
+// redis_sub.on("message", function(channel, message) {
+//   console.log('wee4');
+//   console.log('channel: ' + sys.inspect(channel));
+//   console.log('message: ' + sys.inspect(JSON.parse(message)));
+// });
 
 var app = express.createServer(
   express.bodyDecoder(),
@@ -57,6 +63,12 @@ function subscriber_for(id) {
     subscribers[id] = subscriber = redis.createClient();
     subscriber.id = id;
     subscriber.select(2);
+    subscriber.on("message", function(channel, message) {
+      var message = JSON.parse(message);
+      console.log('channel: ' + sys.inspect(channel));
+      console.log('id: ' + this.id);
+      console.log('message: ' + sys.inspect(message));
+    });
   }
   return subscriber;
 }
@@ -77,12 +89,13 @@ app.post('/position', function(request, response) {
           console.log('subscribe to: ' + row[0]);
           var listener = request.identity;
           var poster   = row[0];
-          subscriber_for(listener).subscribeTo(poster, function(channel, msg) {
-            console.log('listener: ' + listener);
-            console.log('poster:   ' + poster);
-            console.log('channel:  ' + channel);
-            console.log('msg:      ' + msg);
-          });
+          subscriber_for(listener).subscribe(poster);
+          // subscriber_for(listener).subscribeTo(poster, function(channel, msg) {
+          //   console.log('listener: ' + listener);
+          //   console.log('poster:   ' + poster);
+          //   console.log('channel:  ' + channel);
+          //   console.log('msg:      ' + msg);
+          // });
         })
       });
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + request.identity + "';", function(error, rows) {
@@ -90,12 +103,13 @@ app.post('/position', function(request, response) {
           console.log('tell subscribe to: ' + row[0]);
           var listener = row[0];
           var poster   = request.identity;
-          subscriber_for(poster).subscribeTo(listener, function(channel, msg) {
-            console.log('listener: ' + listener);
-            console.log('poster:   ' + poster);
-            console.log('channel:  ' + channel);
-            console.log('msg:      ' + msg);
-          });
+          subscriber_for(poster).subscribe(listener);
+          // subscriber_for(poster).subscribeTo(listener, function(channel, msg) {
+          //   console.log('listener: ' + listener);
+          //   console.log('poster:   ' + poster);
+          //   console.log('channel:  ' + channel);
+          //   console.log('msg:      ' + msg);
+          // });
         })
       });
     }
