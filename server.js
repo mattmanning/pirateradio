@@ -1,4 +1,4 @@
-require.paths.unshift('lib');
+require.paths.unshift(__dirname + '/lib');
 
 var auth     = require('connect-auth');
 var identity = require('connect-identity');
@@ -13,7 +13,7 @@ var utility  = require('utility');
 
 var MemoryStore = require('connect/middleware/session/memory');
 
-var pgdb = postgres.createConnection("host='' dbname='pirateradio'")
+var pgdb = postgres.createConnection("host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'")
 
 var publisher = redis.createClient();
 publisher.select(2);
@@ -25,6 +25,8 @@ var app = express.createServer(
   identity({ cookie: '_pirate_radio_id' }),
   user.middleware({ host: 'localhost', port: 5984 })
 );
+
+app.set('views', __dirname + '/views');
 
 var socket = io.listen(app);
 
@@ -209,28 +211,37 @@ function update_position(user) {
 
   subscriber_for(user.id).unsub_all();
 
+  console.log("insert into locations (id, radius, located_at, location) values (" +
+    "'" + user.id + "',10000,now()," +
+    "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));");
+
   pgdb.query("delete from locations where id = '" + user.id + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
     "'" + user.id + "',10000,now()," +
     "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));",
     function(error) {
-      //console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
+      console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
-        rows.forEach(function(row) {
-          var listener = user.id;
-          var poster   = row[0];
-          log('position.subscribe.me', { listener:listener, poster:poster })
-          subscriber_for(listener).sub(poster);
-        })
+        if (rows) {
+          rows.forEach(function(row) {
+            console.log(sys.inspect(row));
+            var listener = user.id;
+            var poster   = row.id;
+            log('position.subscribe.me', { listener:listener, poster:poster })
+            subscriber_for(listener).sub(poster);
+          })
+        }
       });
       //console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';");
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
-        rows.forEach(function(row) {
-          var listener = row[0];
-          var poster   = user.id;
-          log('position.subscribe.them', { listener:listener, poster:poster })
-          subscriber_for(listener).sub(poster);
-        })
+        if (rows) {
+          rows.forEach(function(row) {
+            var listener = row.id;
+            var poster   = user.id;
+            log('position.subscribe.them', { listener:listener, poster:poster })
+            subscriber_for(listener).sub(poster);
+          })
+        }
       });
     }
   );

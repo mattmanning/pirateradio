@@ -40,7 +40,7 @@ $(window).ready(function() {
         case 'remove':
           var marker = markers[message.id];
           if (marker) {
-            marker.circle.setMap(null);
+            if (marker.circle) marker.circle.setMap(null);
             marker.setMap(null);
           }
           delete markers[message.id];
@@ -108,22 +108,28 @@ function create_marker(data) {
     map: map
   });
 
-  marker.circle = new google.maps.Circle({
-    center:       latlng,
-    radius:       1609,
-    strokeColor:  '#0000FF',
-    strokeWidth:  5,
-    fillOpacity:  0
-  });
-  marker.circle.setMap(map);
+  if (data.me) {
+    marker.circle = new google.maps.Circle({
+      center:       latlng,
+      radius:       1609,
+      strokeColor:  '#0000FF',
+      strokeWidth:  5,
+      fillOpacity:  0
+    });
+    marker.circle.setMap(map);
+  }
 
   google.maps.event.addListener(marker, 'dragstart', function(event){
-    marker.circle.setMap(null);
+    if (marker.circle) {
+      marker.circle.setMap(null);
+    }
   });
 
   google.maps.event.addListener(marker, 'dragend', function(event) {
-    marker.circle.setMap(map);
-    marker.circle.setCenter(event.latLng);
+    if (marker.circle) {
+      marker.circle.setMap(map);
+      marker.circle.setCenter(event.latLng);
+    }
     update_position(event.latLng.lat(), event.latLng.lng());
   });
   
