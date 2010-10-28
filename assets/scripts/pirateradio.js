@@ -15,6 +15,8 @@ $(window).ready(function() {
   function persistent_connect() {
     if (connected) return;
 
+    if (socket && socket.connected && socket.close) socket.close();
+
     socket = new io.Socket(document.location.hostname, { port: document.location.port });  console.log(document.location);
 
     socket.on('connect', function(socket) {
@@ -58,6 +60,7 @@ function locate_user() {
 }
 
 function send_message(message) {
+  console.log('sending: ' + message);
   socket.send(JSON.stringify({ type:'message', message:message }));
 }
 

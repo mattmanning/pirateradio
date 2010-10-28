@@ -63,14 +63,14 @@ socket.on('connection', function(client) {
 
     client.on('disconnect', function() {
       console.log('socket.disconnect', { id:pretty(user.id) })
-      
+
       console.log("delete from locations where id = '" + user.id + "'");
       pgdb.query("delete from locations where id = '" + user.id + "'");
       delete sockets[user.id];
-      
+
       if (subscribers[user.id]) {
         subscribers[user.id].subs.forEach(function(to) {
-          subscriber_for(to).unsub(user.id);      
+          subscriber_for(to).unsub(user.id);
         });
         delete subscribers[user.id];
       }
@@ -112,15 +112,15 @@ function subscriber_for(id) {
     subscriber.id = id;
     subscriber.select(2);
     subscriber.sub = function(to) {
-      if (this.subs.indexOf(to) == -1) {        
-        console.log(pretty(this.id) + ' subscribing to ' + pretty(to));            
+      if (this.subs.indexOf(to) == -1) {
+        console.log(pretty(this.id) + ' subscribing to ' + pretty(to));
         this.subscribe(to);
         this.subs.push(to);
       }
     }
     subscriber.unsub = function(to) {
       if (this.subs.indexOf(to) != -1) {
-        console.log(pretty(this.id) + ' unsubscribing from ' + pretty(to));            
+        console.log(pretty(this.id) + ' unsubscribing from ' + pretty(to));
         this.unsubscribe(to);
         this.subs.splice(this.subs.indexOf(to));
       }
@@ -128,15 +128,15 @@ function subscriber_for(id) {
     subscriber.on("message", function(channel, message) {
       var message = JSON.parse(message);
       log('subscriber.message', message);
-      user.lookup(message.from, function(user) {
+      user.lookup(this.id, function(user) {
         log('subscriber.message.user', { id:user.id });
 
         var from = user.auth ? user.auth.name : 'Anonymous';
 
         var socket = sockets[user.id];
         if (socket) {
-          
-          console.log('sending to: ' + pretty(id));
+          log('subscriber.message.user.send', { id:pretty(user.id) })
+
           socket.send(JSON.stringify({
             type:'message',
             from:from,
@@ -150,6 +150,8 @@ function subscriber_for(id) {
 }
 
 function update_position(user) {
+  log('position.update', { id:pretty(user.id), position:user.position })
+
   if (!user.position) return;
 
   console.log('id: ' + user.identity);
