@@ -34,12 +34,20 @@ socket.on('connection', function(client) {
   var identity = client.request.cookies['_pirate_radio_id'];
   log('socket.connection', { identity:identity });
 
-  user.lookup_by_identity(identity, function(user) {
-    update_position(user);
+  user.lookup_by_identity(identity, function(uu) {
+    update_position(uu);
 
-    log('socket.connection.store', { id:user.id });
+    log('socket.connection.store', { id:uu.id });
 
-    sockets[user.id] = client;
+    sockets[uu.id] = client;
+
+    pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < 160900 WHERE l1.id = '" + uu.id + "';", function(error, rows) {
+      rows.forEach(function(row) {
+        user.lookup(row[0], function(uuu) {
+          update_socket_position(client, uuu, (uu.id==uuu.id))
+        });
+      })
+    });
 
     client.on('message', function(message) {
       var message = JSON.parse(message);
@@ -58,16 +66,23 @@ socket.on('connection', function(client) {
     })
 
     client.on('disconnect', function() {
-      log('socket.disconnect', { id:user.id })
+      log('socket.disconnect', { id:uu.id })
 
-      pgdb.query("delete from locations where id = '" + user.id + "'");
-      delete sockets[user.id];
+      pgdb.query("delete from locations where id = '" + uu.id + "'");
+      delete sockets[uu.id];
 
-      if (subscribers[user.id]) {
-        subscribers[user.id].subs.forEach(function(to) {
-          subscriber_for(to).unsub(user.id);
+      for (var id in sockets) {
+        sockets[id].send(JSON.stringify({
+          type:'remove',
+          id:uu.id
+        }));
+      }
+
+      if (subscribers[uu.id]) {
+        subscribers[uu.id].subs.forEach(function(to) {
+          subscriber_for(to).unsub(uu.id);
         });
-        delete subscribers[user.id];
+        delete subscribers[uu.id];
       }
     })
   });
@@ -144,31 +159,50 @@ function subscriber_for(id) {
   return subscriber;
 }
 
+function update_socket_position(socket, user, me) {
+  var data = {
+    type:'position',
+    id:user.id,
+    me:me,
+    latitude:user.position.latitude,
+    longitude:user.position.longitude
+  }
+  log('position.socket.update', data)
+  socket.send(JSON.stringify(data));  
+}
+
 function update_position(user) {
-  log('position.update', { id:user.id, position:user.position })
+  log('position.update', { id:user.id, lat:user.position.latitude, lng:user.position.longitude })
 
   if (!user.position) return;
 
   var latitude = user.position.latitude;
   var longitude = user.position.longitude;
 
+  for (var id in sockets) {
+    update_socket_position(sockets[id], user, (id==user.id));
+  }
+
   pgdb.query("delete from locations where id = '" + user.id + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
     "'" + user.id + "',1609,now()," +
     "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));",
     function(error) {
-      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.identity + "';", function(error, rows) {
+      console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
+      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
         rows.forEach(function(row) {
           var listener = user.id;
           var poster   = row[0];
+          log('position.subscribe.me', { listener:listener, poster:poster })
           subscriber_for(listener).sub(poster);
         })
       });
-      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.identity + "';", function(error, rows) {
+      console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';");
+      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
         rows.forEach(function(row) {
           var listener = row[0];
           var poster   = user.id;
-          var subscriber = subscriber_for(listener);
+          log('position.subscribe.them', { listener:listener, poster:poster })
           subscriber_for(listener).sub(poster);
         })
       });
