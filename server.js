@@ -154,14 +154,16 @@ function subscriber_for(id) {
     subscriber.on("message", function(channel, message) {
       var message = JSON.parse(message);
       log('subscriber.message', message);
-      user.lookup(this.id, function(user) {
-        log('subscriber.message.user', { id:user.id });
 
-        var from = user.auth ? user.auth.name : 'Anonymous';
+      var to_id = this.id;
+      user.lookup(message.from, function(uu) {
+        log('subscriber.message.user', { from:uu.id, to:to_id });
 
-        var socket = sockets[user.id];
+        var from = uu.auth ? uu.auth.name : 'Anonymous';
+        console.log(sys.inspect(message));
+        var socket = sockets[to_id];
         if (socket) {
-          log('subscriber.message.user.send', { id:user.id })
+          log('subscriber.message.user.send', { id:to_id })
 
           socket.send(JSON.stringify({
             type:'message',
