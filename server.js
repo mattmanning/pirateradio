@@ -14,10 +14,6 @@ var MemoryStore = require('connect/middleware/session/memory');
 
 var pgdb = postgres.createConnection("host='' dbname='pirateradio'")
 
-function pretty(id) {
-  return id.substring(0, 6);
-}
-
 var publisher = redis.createClient();
 publisher.select(2);
 
@@ -36,7 +32,7 @@ var sockets = {};
 socket.on('connection', function(client) {
   express.cookieDecoder()(client.request, client.response, function(){});
   var identity = client.request.cookies['_pirate_radio_id'];
-  log('socket.connection', { identity:pretty(identity) });
+  log('socket.connection', { identity:identity });
 
   user.lookup_by_identity(identity, function(user) {
     update_position(user);
@@ -48,7 +44,7 @@ socket.on('connection', function(client) {
     client.on('message', function(message) {
       var message = JSON.parse(message);
 
-      log('socket.message', { id:pretty(user.id), type:message.type })
+      log('socket.message', { id:user.id, type:message.type })
 
       switch (message.type) {
         case 'message':
@@ -62,9 +58,8 @@ socket.on('connection', function(client) {
     })
 
     client.on('disconnect', function() {
-      console.log('socket.disconnect', { id:pretty(user.id) })
+      log('socket.disconnect', { id:user.id })
 
-      console.log("delete from locations where id = '" + user.id + "'");
       pgdb.query("delete from locations where id = '" + user.id + "'");
       delete sockets[user.id];
 
@@ -94,7 +89,7 @@ app.get('/', function(request, response) {
 app.get('/auth/twitter', function(request, response) {
   twitter.authorize(request, response, function(error, api) {
     api.get('/account/verify_credentials.json', function(error, data) {
-      console.log('ERROR: ' + error);
+      log('auth.twitter.error', { error:error })
       request.user.update({ auth: { type:'twitter', name:data.screen_name }})
       response.redirect('/');
     });
@@ -113,14 +108,14 @@ function subscriber_for(id) {
     subscriber.select(2);
     subscriber.sub = function(to) {
       if (this.subs.indexOf(to) == -1) {
-        console.log(pretty(this.id) + ' subscribing to ' + pretty(to));
+        log('subscriber.sub', { from:this.id, to:to })
         this.subscribe(to);
         this.subs.push(to);
       }
     }
     subscriber.unsub = function(to) {
       if (this.subs.indexOf(to) != -1) {
-        console.log(pretty(this.id) + ' unsubscribing from ' + pretty(to));
+        log('subscriber.unsub', { from:this.id, to:to })
         this.unsubscribe(to);
         this.subs.splice(this.subs.indexOf(to));
       }
@@ -135,7 +130,7 @@ function subscriber_for(id) {
 
         var socket = sockets[user.id];
         if (socket) {
-          log('subscriber.message.user.send', { id:pretty(user.id) })
+          log('subscriber.message.user.send', { id:user.id })
 
           socket.send(JSON.stringify({
             type:'message',
@@ -150,16 +145,12 @@ function subscriber_for(id) {
 }
 
 function update_position(user) {
-  log('position.update', { id:pretty(user.id), position:user.position })
+  log('position.update', { id:user.id, position:user.position })
 
   if (!user.position) return;
 
-  console.log('id: ' + user.identity);
-
   var latitude = user.position.latitude;
   var longitude = user.position.longitude;
-
-  console.log('found [' + pretty(user.identity) + '] position [' + latitude + ',' + longitude + ']');
 
   pgdb.query("delete from locations where id = '" + user.id + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
@@ -197,21 +188,10 @@ app.post('/position', function(request, response) {
     }
   });
 
-  console.log(sys.inspect(request.user));
-
   update_position(request.user);
 
   response.send('thanks');
 });
-
-// app.post('/message', function(request, response) {
-//   console.log('publishing: ' + request.body.text);
-//   publisher.publish(request.identity, JSON.stringify({
-//     from: request.identity,
-//     text: request.body.text
-//   }));
-//   response.send('thanks');
-// });
 
 app.get('/assets/:name.css', function(request, response) {
   var sass = __dirname + '/assets/styles/' + request.params.name + '.sass';
