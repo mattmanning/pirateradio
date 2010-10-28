@@ -160,7 +160,7 @@ function subscriber_for(id) {
         log('subscriber.message.user', { from:uu.id, to:to_id });
 
         var from = uu.auth ? uu.auth.name : 'Anonymous';
-        console.log(sys.inspect(message));
+
         var socket = sockets[to_id];
         if (socket) {
           log('subscriber.message.user.send', { id:to_id })
@@ -213,20 +213,15 @@ function update_position(user) {
 
   subscriber_for(user.id).unsub_all();
 
-  console.log("insert into locations (id, radius, located_at, location) values (" +
-    "'" + user.id + "',10000,now()," +
-    "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));");
-
   pgdb.query("delete from locations where id = '" + user.id + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
     "'" + user.id + "',10000,now()," +
     "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));",
     function(error) {
-      console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
+      //console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
         if (rows) {
           rows.forEach(function(row) {
-            console.log(sys.inspect(row));
             var listener = user.id;
             var poster   = row.id;
             log('position.subscribe.me', { listener:listener, poster:poster })
