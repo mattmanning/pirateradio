@@ -9,6 +9,7 @@ var postgres = require('postgres');
 var redis    = require('redis');
 var sys      = require('sys');
 var user     = require('user');
+var utility  = require('utility');
 
 var MemoryStore = require('connect/middleware/session/memory');
 
@@ -41,24 +42,30 @@ socket.on('connection', function(client) {
 
     sockets[uu.id] = client;
 
-    pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < 160900 WHERE l1.id = '" + uu.id + "';", function(error, rows) {
-      rows.forEach(function(row) {
-        user.lookup(row[0], function(uuu) {
-          update_socket_position(client, uuu, (uu.id==uuu.id))
-        });
+    for (var id in sockets) {
+      user.lookup(id, function(uuu) {
+        update_socket_position(client, uuu, (uu.id === uuu.id))
       })
-    });
+    }
+
+    // pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < 160900 WHERE l1.id = '" + uu.id + "';", function(error, rows) {
+    //   rows.forEach(function(row) {
+    //     user.lookup(row[0], function(uuu) {
+    //       update_socket_position(client, uuu, (uu.id==uuu.id))
+    //     });
+    //   })
+    // });
 
     client.on('message', function(message) {
       var message = JSON.parse(message);
 
-      log('socket.message', { id:user.id, type:message.type })
+      log('socket.message', { id:uu.id, type:message.type })
 
       switch (message.type) {
         case 'message':
-          log('socket.message.message', { from:user.id, text:message.message });
-          publisher.publish(user.id, JSON.stringify({
-            from: user.id,
+          log('socket.message.message', { from:uu.id, text:message.message });
+          publisher.publish(uu.id, JSON.stringify({
+            from: uu.id,
             text: message.message
           }));
           break;
@@ -135,6 +142,13 @@ function subscriber_for(id) {
         this.subs.splice(this.subs.indexOf(to));
       }
     }
+    subscriber.unsub_all = function() {
+      log('subscriber.unsub.all');
+      for (var id in utility.clone(this.subs)) {
+        this.unsub(id);
+      }
+      this.subs = [];
+    }
     subscriber.on("message", function(channel, message) {
       var message = JSON.parse(message);
       log('subscriber.message', message);
@@ -160,6 +174,8 @@ function subscriber_for(id) {
 }
 
 function update_socket_position(socket, user, me) {
+  if (!user.position) return;
+
   var data = {
     type:'position',
     id:user.id,
@@ -172,23 +188,33 @@ function update_socket_position(socket, user, me) {
 }
 
 function update_position(user) {
-  log('position.update', { id:user.id, lat:user.position.latitude, lng:user.position.longitude })
+  if (!user.position) {
+    user.update({
+      position: {
+        latitude: 33.788,
+        longitude: -84.289
+      }
+    })
+  }
 
-  if (!user.position) return;
+  log('position.update', { id:user.id, lat:user.position.latitude, lng:user.position.longitude })
 
   var latitude = user.position.latitude;
   var longitude = user.position.longitude;
 
   for (var id in sockets) {
+    subscriber_for(id).unsub(user.id);
     update_socket_position(sockets[id], user, (id==user.id));
   }
 
+  subscriber_for(user.id).unsub_all();
+
   pgdb.query("delete from locations where id = '" + user.id + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
-    "'" + user.id + "',1609,now()," +
+    "'" + user.id + "',10000,now()," +
     "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));",
     function(error) {
-      console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
+      //console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
         rows.forEach(function(row) {
           var listener = user.id;
@@ -197,7 +223,7 @@ function update_position(user) {
           subscriber_for(listener).sub(poster);
         })
       });
-      console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';");
+      //console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';");
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
         rows.forEach(function(row) {
           var listener = row[0];

@@ -110,7 +110,7 @@ function create_marker(data) {
 
   marker.circle = new google.maps.Circle({
     center:       latlng,
-    radius:       2000,
+    radius:       1609,
     strokeColor:  '#0000FF',
     strokeWidth:  5,
     fillOpacity:  0
