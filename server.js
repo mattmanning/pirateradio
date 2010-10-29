@@ -74,13 +74,15 @@ var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pir
 
 astrolabe.on('update', function(from) {
   log('astrolabe.on.update', { from:from })
+  switchboard.endpoint(from).unsubscribe_all();
+
+  hermes.each(function(to, socket) {
+    switchboard.endpoint(to).unsubscribe(from);    
+  });
 
   user.lookup(from, function(from_user) {
-    //switchboard.endpoint(from).unsubscribe_all();
 
     hermes.each(function(to, socket) {
-      //switchboard.endpoint(to).unsubscribe(from);
-
       hermes.send(to, {
         type:'position',
         id:from,
