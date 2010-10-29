@@ -31,7 +31,7 @@ $(window).ready(function() {
 
       switch(message.type) {
         case 'message':
-          $('#log').append('[' + message.from + '] ' + message.message + '\n');
+          $('#log').append('[' + message.from + '] ' + message.text + '\n');
           $('#log').scrollTop($('#log')[0].scrollHeight);
           break;
         case 'position':

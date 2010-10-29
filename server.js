@@ -1,6 +1,7 @@
 require.paths.unshift(__dirname + '/lib');
 
 var auth     = require('connect-auth');
+var hermes   = require('hermes');
 var identity = require('connect-identity');
 var io       = require('socket.io');
 var log      = require('log');
@@ -11,12 +12,29 @@ var sys      = require('sys');
 var user     = require('user');
 var utility  = require('utility');
 
-var MemoryStore = require('connect/middleware/session/memory');
-
 var pgdb = postgres.createConnection("host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'")
 
-var publisher = redis.createClient();
-publisher.select(2);
+var hermes = require('hermes').create();
+
+hermes.on('message', function(from, to, message) {
+  log('hermes.on.message', { from:from, to:to, message:message });
+
+  user.lookup(from, function(user) {
+    log('hermes.on.message.user', { id:user.id });
+
+    var pretty_from = user.auth ? user.auth.name : 'anonymous';
+
+    var socket = sockets[to];
+    if (socket) {
+      log('socket.send.message', { id:user.id });
+      socket.send(JSON.stringify({
+        type: 'message',
+        from: pretty_from,
+        text: message
+      }));
+    }
+  })
+})
 
 var app = express.createServer(
   express.bodyDecoder(),
@@ -66,10 +84,7 @@ socket.on('connection', function(client) {
       switch (message.type) {
         case 'message':
           log('socket.message.message', { from:uu.id, text:message.message });
-          publisher.publish(uu.id, JSON.stringify({
-            from: uu.id,
-            text: message.message
-          }));
+          hermes.endpoint(uu.id).publish(message.message);
           break;
       }
     })
@@ -87,12 +102,7 @@ socket.on('connection', function(client) {
         }));
       }
 
-      if (subscribers[uu.id]) {
-        subscribers[uu.id].subs.forEach(function(to) {
-          subscriber_for(to).unsub(uu.id);
-        });
-        delete subscribers[uu.id];
-      }
+      hermes.endpoint(uu.id).close();
     })
   });
 });
@@ -120,63 +130,6 @@ app.get('/auth/twitter', function(request, response) {
   });
 });
 
-var EARTH_RADIUS = 6378137.0;
-
-var subscribers = {}
-function subscriber_for(id) {
-  var subscriber = subscribers[id];
-  if (!subscriber) {
-    subscribers[id] = subscriber = redis.createClient();
-    subscriber.subs = [];
-    subscriber.id = id;
-    subscriber.select(2);
-    subscriber.sub = function(to) {
-      if (this.subs.indexOf(to) == -1) {
-        log('subscriber.sub', { from:this.id, to:to })
-        this.subscribe(to);
-        this.subs.push(to);
-      }
-    }
-    subscriber.unsub = function(to) {
-      if (this.subs.indexOf(to) != -1) {
-        log('subscriber.unsub', { from:this.id, to:to })
-        this.unsubscribe(to);
-        this.subs.splice(this.subs.indexOf(to));
-      }
-    }
-    subscriber.unsub_all = function() {
-      log('subscriber.unsub.all');
-      for (var id in utility.clone(this.subs)) {
-        this.unsub(id);
-      }
-      this.subs = [];
-    }
-    subscriber.on("message", function(channel, message) {
-      var message = JSON.parse(message);
-      log('subscriber.message', message);
-
-      var to_id = this.id;
-      user.lookup(message.from, function(uu) {
-        log('subscriber.message.user', { from:uu.id, to:to_id });
-
-        var from = uu.auth ? uu.auth.name : 'Anonymous';
-
-        var socket = sockets[to_id];
-        if (socket) {
-          log('subscriber.message.user.send', { id:to_id })
-
-          socket.send(JSON.stringify({
-            type:'message',
-            from:from,
-            message:message.text
-          }))
-        }
-      });
-    });
-  }
-  return subscriber;
-}
-
 function update_socket_position(socket, user, me) {
   if (!user.position) return;
 
@@ -188,7 +141,7 @@ function update_socket_position(socket, user, me) {
     longitude:user.position.longitude
   }
   log('position.socket.update', data)
-  socket.send(JSON.stringify(data));  
+  socket.send(JSON.stringify(data));
 }
 
 function update_position(user) {
@@ -207,11 +160,11 @@ function update_position(user) {
   var longitude = user.position.longitude;
 
   for (var id in sockets) {
-    subscriber_for(id).unsub(user.id);
+    hermes.endpoint(id).unsubscribe(user.id);
     update_socket_position(sockets[id], user, (id==user.id));
   }
 
-  subscriber_for(user.id).unsub_all();
+  hermes.endpoint(user.id).unsubscribe_all();
 
   pgdb.query("delete from locations where id = '" + user.id + "'");
   pgdb.query("insert into locations (id, radius, located_at, location) values (" +
@@ -223,9 +176,9 @@ function update_position(user) {
         if (rows) {
           rows.forEach(function(row) {
             var listener = user.id;
-            var poster   = row.id;
+            var poster   = (row.id || row[0]);
             log('position.subscribe.me', { listener:listener, poster:poster })
-            subscriber_for(listener).sub(poster);
+            hermes.endpoint(listener).subscribe(poster);
           })
         }
       });
@@ -233,10 +186,10 @@ function update_position(user) {
       pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
         if (rows) {
           rows.forEach(function(row) {
-            var listener = row.id;
+            var listener = (row.id || row[0]);
             var poster   = user.id;
             log('position.subscribe.them', { listener:listener, poster:poster })
-            subscriber_for(listener).sub(poster);
+            hermes.endpoint(listener).subscribe(poster);
           })
         }
       });
