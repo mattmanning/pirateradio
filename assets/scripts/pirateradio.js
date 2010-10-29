@@ -143,7 +143,7 @@ function update_marker(data) {
   var latlng = new google.maps.LatLng(data.latitude, data.longitude);
   console.log(latlng);
   marker.setPosition(latlng);
-  marker.circle.setCenter(latlng);
+  if (marker.circle) marker.circle.setCenter(latlng);
 }
 
 function initialize_map() {

@@ -1,40 +1,15 @@
 require.paths.unshift(__dirname + '/lib');
 
 var auth     = require('connect-auth');
-var hermes   = require('hermes');
 var identity = require('connect-identity');
-var io       = require('socket.io');
 var log      = require('log');
 var express  = require('express');
-var postgres = require('postgres');
 var redis    = require('redis');
 var sys      = require('sys');
 var user     = require('user');
 var utility  = require('utility');
 
-var pgdb = postgres.createConnection("host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'")
-
-var hermes = require('hermes').create();
-
-hermes.on('message', function(from, to, message) {
-  log('hermes.on.message', { from:from, to:to, message:message });
-
-  user.lookup(from, function(user) {
-    log('hermes.on.message.user', { id:user.id });
-
-    var pretty_from = user.auth ? user.auth.name : 'anonymous';
-
-    var socket = sockets[to];
-    if (socket) {
-      log('socket.send.message', { id:user.id });
-      socket.send(JSON.stringify({
-        type: 'message',
-        from: pretty_from,
-        text: message
-      }));
-    }
-  })
-})
+/** APP *********************************************************************/
 
 var app = express.createServer(
   express.bodyDecoder(),
@@ -45,72 +20,6 @@ var app = express.createServer(
 );
 
 app.set('views', __dirname + '/views');
-
-var socket = io.listen(app);
-
-var sockets = {};
-
-socket.on('connection', function(client) {
-  express.cookieDecoder()(client.request, client.response, function(){});
-  var identity = client.request.cookies['_pirate_radio_id'];
-  log('socket.connection', { identity:identity });
-
-  user.lookup_by_identity(identity, function(uu) {
-    update_position(uu);
-
-    log('socket.connection.store', { id:uu.id });
-
-    sockets[uu.id] = client;
-
-    for (var id in sockets) {
-      user.lookup(id, function(uuu) {
-        update_socket_position(client, uuu, (uu.id === uuu.id))
-      })
-    }
-
-    // pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < 160900 WHERE l1.id = '" + uu.id + "';", function(error, rows) {
-    //   rows.forEach(function(row) {
-    //     user.lookup(row[0], function(uuu) {
-    //       update_socket_position(client, uuu, (uu.id==uuu.id))
-    //     });
-    //   })
-    // });
-
-    client.on('message', function(message) {
-      var message = JSON.parse(message);
-
-      log('socket.message', { id:uu.id, type:message.type })
-
-      switch (message.type) {
-        case 'message':
-          log('socket.message.message', { from:uu.id, text:message.message });
-          hermes.endpoint(uu.id).publish(message.message);
-          break;
-      }
-    })
-
-    client.on('disconnect', function() {
-      log('socket.disconnect', { id:uu.id })
-
-      pgdb.query("delete from locations where id = '" + uu.id + "'");
-      delete sockets[uu.id];
-
-      for (var id in sockets) {
-        sockets[id].send(JSON.stringify({
-          type:'remove',
-          id:uu.id
-        }));
-      }
-
-      hermes.endpoint(uu.id).close();
-    })
-  });
-});
-
-var twitter = require('twitter-connect').createClient({
-  consumerKey:    'SL0d7ouDmx4HbjKrx3Cp9Q',
-  consumerSecret: 'JUM2ZnY3AwzFQ8U5qb05ZVsvrGymRlVdO3mptvJGec'
-});
 
 app.get('/', function(request, response) {
   response.render('index.haml', { locals: {
@@ -130,73 +39,6 @@ app.get('/auth/twitter', function(request, response) {
   });
 });
 
-function update_socket_position(socket, user, me) {
-  if (!user.position) return;
-
-  var data = {
-    type:'position',
-    id:user.id,
-    me:me,
-    latitude:user.position.latitude,
-    longitude:user.position.longitude
-  }
-  log('position.socket.update', data)
-  socket.send(JSON.stringify(data));
-}
-
-function update_position(user) {
-  if (!user.position) {
-    user.update({
-      position: {
-        latitude: 33.788,
-        longitude: -84.289
-      }
-    })
-  }
-
-  log('position.update', { id:user.id, lat:user.position.latitude, lng:user.position.longitude })
-
-  var latitude = user.position.latitude;
-  var longitude = user.position.longitude;
-
-  for (var id in sockets) {
-    hermes.endpoint(id).unsubscribe(user.id);
-    update_socket_position(sockets[id], user, (id==user.id));
-  }
-
-  hermes.endpoint(user.id).unsubscribe_all();
-
-  pgdb.query("delete from locations where id = '" + user.id + "'");
-  pgdb.query("insert into locations (id, radius, located_at, location) values (" +
-    "'" + user.id + "',10000,now()," +
-    "ST_Transform(ST_GeomFromText('POINT(" + latitude + ' ' + longitude + ")', 4326), 900913));",
-    function(error) {
-      //console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';");
-      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l1.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
-        if (rows) {
-          rows.forEach(function(row) {
-            var listener = user.id;
-            var poster   = (row.id || row[0]);
-            log('position.subscribe.me', { listener:listener, poster:poster })
-            hermes.endpoint(listener).subscribe(poster);
-          })
-        }
-      });
-      //console.log("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';");
-      pgdb.query("SELECT l2.id FROM locations AS l1 INNER JOIN locations AS l2 ON ST_Distance(l1.location, l2.location) < l2.radius WHERE l1.id = '" + user.id + "';", function(error, rows) {
-        if (rows) {
-          rows.forEach(function(row) {
-            var listener = (row.id || row[0]);
-            var poster   = user.id;
-            log('position.subscribe.them', { listener:listener, poster:poster })
-            hermes.endpoint(listener).subscribe(poster);
-          })
-        }
-      });
-    }
-  );
-}
-
 app.post('/position', function(request, response) {
   var latitude  = parseFloat(request.body.latitude);
   var longitude = parseFloat(request.body.longitude);
@@ -209,7 +51,7 @@ app.post('/position', function(request, response) {
     }
   });
 
-  update_position(request.user);
+  astrolabe.update(request.user.id, request.user.position);
 
   response.send('thanks');
 });
@@ -225,5 +67,104 @@ app.get('/assets/:name.js', function(request, response) {
   response.headers['Content-Type'] = 'text/javascript';
   response.sendfile(js);
 });
+
+/** ASTROLABE ***************************************************************/
+
+var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })
+
+astrolabe.on('update', function(from) {
+  log('astrolabe.on.update', { from:from })
+
+  user.lookup(from, function(from_user) {
+    //switchboard.endpoint(from).unsubscribe_all();
+
+    hermes.each(function(to, socket) {
+      //switchboard.endpoint(to).unsubscribe(from);
+
+      hermes.send(to, {
+        type:'position',
+        id:from,
+        me:(from == to),
+        latitude:from_user.position.latitude,
+        longitude:from_user.position.longitude
+      });
+
+      user.lookup(to, function(to_user) {
+        hermes.send(from, {
+          type:'position',
+          id:to,
+          me:(from == to),
+          latitude:to_user.position.latitude,
+          longitude:to_user.position.longitude
+        })
+      });
+    })
+  });
+});
+
+astrolabe.on('subscribe', function(listener, poster) {
+  log('astrolabe.on.subscribe', { listener:listener, poster:poster });
+  switchboard.endpoint(listener).subscribe(poster);
+});
+
+/** HERMES ******************************************************************/
+
+var hermes = require('hermes').create({ app:app });
+
+hermes.on('connection', function(id) {
+  log('hermes.on.connection', { id:id });
+  user.lookup(id, function(user) {
+    if (!user.position) {
+      user.update({ position: { latitude: 33.788, longitude: -84.289 }});
+    }
+    astrolabe.update(user.id, user.position);
+  })
+});
+
+hermes.on('message', function(id, message) {
+  log('hermes.on.message', { id:id, message:message });
+
+  switch (message.type) {
+    case 'message':
+      log('hermes.message.message', { from:id, text:message.message });
+      switchboard.endpoint(id).publish(message.message);
+      break;
+  }
+});
+
+hermes.on('disconnect', function(id) {
+  log('hermes.on.disconnect', { id:id });
+  astrolabe.remove(id);
+  switchboard.endpoint(id).close();
+});
+
+/** SWITCHBOARD *************************************************************/
+
+var switchboard = require('switchboard').create();
+
+switchboard.on('message', function(from, to, message) {
+  log('switchboard.on.message', { from:from, to:to, message:message });
+
+  user.lookup(from, function(user) {
+    log('switchboard.on.message.user', { id:user.id });
+    var pretty_from = user.auth ? user.auth.name : 'anonymous';
+
+    log('switchboard.on.message.send', { id:user.id });
+    hermes.send(to, {
+      type: 'message',
+      from: pretty_from,
+      text: message
+    })
+  })
+})
+
+/** TWITTER *****************************************************************/
+
+var twitter = require('twitter-connect').createClient({
+  consumerKey:    'SL0d7ouDmx4HbjKrx3Cp9Q',
+  consumerSecret: 'JUM2ZnY3AwzFQ8U5qb05ZVsvrGymRlVdO3mptvJGec'
+});
+
+/** MAIN ********************************************************************/
 
 app.listen(process.env.PORT || 3000);
