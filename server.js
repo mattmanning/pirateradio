@@ -1,6 +1,8 @@
 require.paths.unshift(__dirname + '/lib');
 
 var auth     = require('connect-auth');
+var crypto   = require('crypto');
+var fs       = require('fs');
 var identity = require('connect-identity');
 var log      = require('log');
 var express  = require('express');
@@ -8,6 +10,18 @@ var redis    = require('redis');
 var sys      = require('sys');
 var user     = require('user');
 var utility  = require('utility');
+
+/** REDIRECTOR **************************************************************/
+
+if (process.env.SECURE) {
+  var redirector = express.createServer();
+
+  redirector.get('/', function(request, response) {
+    response.redirect('https://' + request.headers.host);
+  });
+
+  redirector.listen(80);
+}
 
 /** APP *********************************************************************/
 
@@ -77,7 +91,7 @@ astrolabe.on('update', function(from) {
   switchboard.endpoint(from).unsubscribe_all();
 
   hermes.each(function(to, socket) {
-    switchboard.endpoint(to).unsubscribe(from);    
+    switchboard.endpoint(to).unsubscribe(from);
   });
 
   user.lookup(from, function(from_user) {
@@ -169,4 +183,13 @@ var twitter = require('twitter-connect').createClient({
 
 /** MAIN ********************************************************************/
 
-app.listen(process.env.PORT || 3000);
+if (process.env.SECURE) {
+  var privateKey = fs.readFileSync('privatekey.pem').toString();
+  var certificate = fs.readFileSync('certificate.pem').toString();
+  var credentials = crypto.createCredentials({key: privateKey, cert: certificate});
+
+  app.setSecure(credentials);
+  app.listen(443);
+} else {
+  app.listen(process.env.PORT || 3000);
+}
