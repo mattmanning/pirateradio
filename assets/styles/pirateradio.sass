@@ -1,3 +1,13 @@
++clearfix
+  &:after
+    content: "."
+    display: block
+    height: 0
+    clear: both
+    visibility: hidden
+  * html &
+    height: 1px
+
 body
   :margin 0
   :padding 0
@@ -54,22 +64,75 @@ body
 #map
   :position absolute
   :top 79px
-  :bottom 0
-  :left 0px
-  :right 400px
+  :bottom 0px
+  :left 47px
+  :right 500px
   :background #ddd
+#userbar
+  :position absolute
+  :top 79px
+  :bottom 0
+  :left 0
+  :width 47px
+  :background #999
+  img
+    :background #333
+    :width 36px
+    :height 36px
+    :border 1px #333 solid
+    :margin 4px
+    :margin-bottom 0
+    :float left
 #log
   :background #eee
   :position absolute
-  :top 76px
+  :top 78px
   :right 0
-  :bottom 100px
-  :width 400px
+  :bottom 44px
+  :width 500px
+  :border 1px #999 solid
+  :overflow-x hidden
+  :overflow-y scroll
+  .message
+    +clearfix
+    :background #ddd
+    :border-bottom 1px #888 solid
+    :height 66px
+    :font-family LucidaGrande, Helvetica, Arial, sans-serif
+    :font-size 12px
+    :line-height 14px
+    .avatar
+      :float left
+      :height 40px
+      :width 40px
+      :margin 12px
+      :border 1px #888 solid
+      :background #bbb
+      :padding 0
+    .text
+      +clearfix
+      :color #333
+      :float left
+      :margin-top 10px
+      :overflow hidden
+      :width 406px
+      :height 32px
+      .name
+        :margin-right 4px
+        :font-weight bold
+        :text-decoration none
+        :color #277ad0
+    .meta
+      :color #999
+      :font-size 10px
+      :float left
 #entry
   :position absolute
-  :background #ddd
+  :background #fff
   :right 0
-  :width 400px
+  :width 496px
   :bottom 0
-  :height 100px
+  :height 40px
+  :font-family LucidaGrande, Helvetica, Arial, sans-serif
+  :font-size 14px
 

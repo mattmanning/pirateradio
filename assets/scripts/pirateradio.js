@@ -1,5 +1,6 @@
 var socket = null;
 var connected = false;
+var nearby = {};
 
 $(window).ready(function() {
   locate_user();
@@ -32,11 +33,30 @@ $(window).ready(function() {
 
       switch(message.type) {
         case 'message':
-          $('#log').append('[' + message.from + '] ' + message.text + '\n');
+          $('#log').append('                                              \
+            <div class="message">                                         \
+              <img class="avatar" src="' + nearby[message.from].avatar + '">                                        \
+              <div class="text">                                          \
+                <a class="name" href="#">' + nearby[message.from].name + '</a>         \
+                ' + message.text + '                                      \
+              </div>                                                      \
+              <div class="meta">                                          \
+                One hour ago                                              \
+              </div>                                                      \
+            </div>                                                        \
+          ');
           $('#log').scrollTop($('#log')[0].scrollHeight);
           break;
         case 'position':
           update_marker(message);
+          break;
+        case 'subscribe':
+          nearby[message.id] = message.user;
+          $('#userbar').append('<img class="' + message.id + '" src="' + message.user.avatar + '">');
+          break;
+        case 'unsubscribe':
+          $('#userbar .' + message.id).remove();
+          delete nearby[message.id];
           break;
         case 'remove':
           var marker = markers[message.id];

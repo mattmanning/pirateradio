@@ -47,7 +47,10 @@ app.get('/auth/twitter', function(request, response) {
   twitter.authorize(request, response, function(error, api) {
     api.get('/account/verify_credentials.json', function(error, data) {
       log('auth.twitter.error', { error:error })
-      request.user.update({ auth: { type:'twitter', name:data.screen_name }})
+      request.user.update({
+        auth: { type:'twitter', name:data.screen_name },
+        avatar: data.profile_image_url
+      });
       response.redirect('/');
     });
   });
@@ -95,12 +98,19 @@ astrolabe.on('update', function(from, latitude, longitude) {
 
 astrolabe.on('connect', function(listener, poster) {
   log('astrolabe.on.connect', { listener:listener, poster:poster });
-  switchboard.endpoint(listener).subscribe(poster);  
+  switchboard.endpoint(listener).subscribe(poster);
+  user.lookup(poster, function(user) {
+    hermes.subscribe(listener, poster, {
+      name: (user.auth ? user.auth.name : 'Anonymous'),
+      avatar: (user.avatar || '')
+    })
+  });
 });
 
 astrolabe.on('disconnect', function(listener, poster) {
   log('astrolabe.on.disconnect', { listener:listener, poster:poster });
-  switchboard.endpoint(listener).unsubscribe(poster);  
+  switchboard.endpoint(listener).unsubscribe(poster);
+  hermes.unsubscribe(listener, poster);
 });
 
 /** HERMES ******************************************************************/
@@ -118,7 +128,7 @@ hermes.on('connection', function(id) {
 
   hermes.each(function(from, socket) {
     user.lookup(from, function(user) {
-      hermes.position(id, user.id, user.position);      
+      hermes.position(id, user.id, user.position);
     });
   });
 });
@@ -146,17 +156,10 @@ var switchboard = require('switchboard').create();
 
 switchboard.on('message', function(from, to, message) {
   log('switchboard.on.message', { from:from, to:to, message:message });
-
-  user.lookup(from, function(user) {
-    log('switchboard.on.message.user', { id:user.id });
-    var pretty_from = user.auth ? user.auth.name : 'anonymous';
-
-    log('switchboard.on.message.send', { id:user.id });
-    hermes.send(to, {
-      type: 'message',
-      from: pretty_from,
-      text: message
-    })
+  hermes.send(to, {
+    type: 'message',
+    from: from,
+    text: message
   })
 })
 
