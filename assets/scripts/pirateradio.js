@@ -17,7 +17,8 @@ $(window).ready(function() {
 
     if (socket && socket.connected && socket.close) socket.close();
 
-    socket = new io.Socket(document.location.hostname, { port:document.location.port, secure:true });  console.log(document.location);
+    //socket = new io.Socket(document.location.hostname, { port:document.location.port, secure:true });  console.log(document.location);
+    socket = new io.Socket(document.location.hostname, { port:document.location.port });  console.log(document.location);
 
     socket.on('connect', function(socket) {
       console.log('connected');

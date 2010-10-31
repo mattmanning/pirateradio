@@ -184,8 +184,8 @@ var twitter = require('twitter-connect').createClient({
 /** MAIN ********************************************************************/
 
 if (process.env.SECURE) {
-  var privateKey = fs.readFileSync('privatekey.pem').toString();
-  var certificate = fs.readFileSync('certificate.pem').toString();
+  var privateKey = fs.readFileSync(__dirname + '/privatekey.pem').toString();
+  var certificate = fs.readFileSync(__dirname + '/certificate.pem').toString();
   var credentials = crypto.createCredentials({key: privateKey, cert: certificate});
 
   app.setSecure(credentials);
