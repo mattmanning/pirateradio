@@ -114,7 +114,13 @@ hermes.on('connection', function(id) {
       user.update({ position: { latitude: 33.788, longitude: -84.289 }});
     }
     astrolabe.update(user.id, user.position.latitude, user.position.longitude);
-  })
+  });
+
+  hermes.each(function(from, socket) {
+    user.lookup(from, function(user) {
+      hermes.position(id, user.id, user.position);      
+    });
+  });
 });
 
 hermes.on('message', function(id, message) {
