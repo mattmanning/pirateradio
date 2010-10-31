@@ -65,9 +65,9 @@ app.post('/position', function(request, response) {
     }
   });
 
-  astrolabe.update(request.user.id, request.user.position);
+  astrolabe.update(request.user.id, latitude, longitude);
 
-  response.send('thanks');
+  response.send('OK');
 });
 
 app.get('/assets/:name.css', function(request, response) {
@@ -86,41 +86,21 @@ app.get('/assets/:name.js', function(request, response) {
 
 var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })
 
-astrolabe.on('update', function(from) {
+astrolabe.on('update', function(from, latitude, longitude) {
   log('astrolabe.on.update', { from:from })
-  switchboard.endpoint(from).unsubscribe_all();
-
-  hermes.each(function(to, socket) {
-    switchboard.endpoint(to).unsubscribe(from);
-  });
-
-  user.lookup(from, function(from_user) {
-
-    hermes.each(function(to, socket) {
-      hermes.send(to, {
-        type:'position',
-        id:from,
-        me:(from == to),
-        latitude:from_user.position.latitude,
-        longitude:from_user.position.longitude
-      });
-
-      user.lookup(to, function(to_user) {
-        hermes.send(from, {
-          type:'position',
-          id:to,
-          me:(from == to),
-          latitude:to_user.position.latitude,
-          longitude:to_user.position.longitude
-        })
-      });
-    })
+  hermes.each(function(id, socket) {
+    hermes.position(id, from, { latitude:latitude, longitude:longitude });
   });
 });
 
-astrolabe.on('subscribe', function(listener, poster) {
-  log('astrolabe.on.subscribe', { listener:listener, poster:poster });
-  switchboard.endpoint(listener).subscribe(poster);
+astrolabe.on('connect', function(listener, poster) {
+  log('astrolabe.on.connect', { listener:listener, poster:poster });
+  switchboard.endpoint(listener).subscribe(poster);  
+});
+
+astrolabe.on('disconnect', function(listener, poster) {
+  log('astrolabe.on.disconnect', { listener:listener, poster:poster });
+  switchboard.endpoint(listener).unsubscribe(poster);  
 });
 
 /** HERMES ******************************************************************/
@@ -133,7 +113,7 @@ hermes.on('connection', function(id) {
     if (!user.position) {
       user.update({ position: { latitude: 33.788, longitude: -84.289 }});
     }
-    astrolabe.update(user.id, user.position);
+    astrolabe.update(user.id, user.position.latitude, user.position.longitude);
   })
 });
 
