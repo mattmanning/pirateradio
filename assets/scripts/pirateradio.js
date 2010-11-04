@@ -1,8 +1,11 @@
 var socket = null;
 var connected = false;
 var nearby = {};
+var distanceWidget;
+var map;
 
 $(window).ready(function() {
+  init();
   locate_user();
 
   $('#entry').bind('keypress', function(ev) {
@@ -59,12 +62,12 @@ $(window).ready(function() {
           delete nearby[message.id];
           break;
         case 'remove':
-          var marker = markers[message.id];
-          if (marker) {
-            if (marker.circle) marker.circle.setMap(null);
-            marker.setMap(null);
-          }
-          delete markers[message.id];
+          // var marker = markers[message.id];
+          // if (marker) {
+          //   if (marker.circle) marker.circle.setMap(null);
+          //   marker.setMap(null);
+          // }
+          // delete markers[message.id];
           break;
       }
     });
@@ -99,6 +102,7 @@ function send_message(message) {
 
 function position_success(position) {
   update_position(position.coords.latitude, position.coords.longitude);
+  map.setCenter(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
 }
 
 function position_error(message) {
@@ -118,63 +122,40 @@ function update_position(latitude, longitude) {
   });
 }
 
-var markers = {};
-var map = null;
-
-function create_marker(data) {
-  var latlng = new google.maps.LatLng(data.latitude, data.longitude);
-  var marker = markers[data.id] = new google.maps.Marker({
-    position: latlng,
-    draggable: data.me,
-    map: map
-  });
-
-  if (data.me) {
-    marker.circle = new google.maps.Circle({
-      center:       latlng,
-      radius:       2000,
-      strokeColor:  '#0000FF',
-      strokeWidth:  5,
-      fillOpacity:  0
-    });
-    marker.circle.setMap(map);
-  }
-
-  google.maps.event.addListener(marker, 'dragstart', function(event){
-    if (marker.circle) {
-      marker.circle.setMap(null);
-    }
-  });
-
-  google.maps.event.addListener(marker, 'dragend', function(event) {
-    if (marker.circle) {
-      marker.circle.setMap(map);
-      marker.circle.setCenter(event.latLng);
-    }
-    update_position(event.latLng.lat(), event.latLng.lng());
-  });
-  
-  return marker
+function update_radius() {
+  alert(distanceWidget.get('distance'));
 }
 
 function update_marker(data) {
-  console.log('updating marker', data);
-  if (!markers[data.id]) { markers[data.id] = create_marker(data); }
-  var marker = markers[data.id];
+//   console.log('updating marker', data);
+//   if (!markers[data.id]) { markers[data.id] = create_marker(data); }
+//   var marker = markers[data.id];
   var latlng = new google.maps.LatLng(data.latitude, data.longitude);
   console.log(latlng);
-  marker.setPosition(latlng);
-  if (marker.circle) marker.circle.setCenter(latlng);
+  distanceWidget.set('position', latlng);
 }
 
-function initialize_map() {
-  var latlng = new google.maps.LatLng(33.75, -84.37);
+function update_radius_marker(distance) {
+  distanceWidget.set('distance', distance);
+}
 
-  var myOptions = {
-    zoom:      11,
-    center:    latlng,
+function init() {
+  var mapDiv = document.getElementById('map');
+  map = new google.maps.Map(mapDiv, {
+    center: new google.maps.LatLng(33.75, -84.37),
+    zoom: 8,
     mapTypeId: google.maps.MapTypeId.ROADMAP
-  };
+  });
 
-  map = new google.maps.Map($("#map")[0], myOptions);
+  distanceWidget = new DistanceWidget({
+    map: map,
+    distance: 2000, // Starting distance in meters.
+    maxDistance: 2500000,
+    color: '#000',
+    activeColor: '#59b',
+    sizerIcon: new google.maps.MarkerImage('http://code.google.com/apis/maps/articles/mvcfun/resize-off.png'),
+    activeSizerIcon: new google.maps.MarkerImage('http://code.google.com/apis/maps/articles/mvcfun/resize.png')
+  });
+
+  map.fitBounds(distanceWidget.get('bounds'));
 }
