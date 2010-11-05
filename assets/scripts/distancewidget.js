@@ -56,6 +56,9 @@ function DistanceWidget(opt_options) {
   });
 }
 DistanceWidget.prototype = new google.maps.MVCObject();
+DistanceWidget.prototype.setPosition = function(latlng) {
+  this.set('position', latlng);
+}
 
 
 /**
