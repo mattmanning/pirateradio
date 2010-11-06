@@ -59,6 +59,8 @@ $(window).ready(function() {
           delete nearby[message.id];
           break;
         case 'remove':
+          $('#userbar .' + message.id).remove();
+          delete nearby[message.id];
           var marker = markers[message.id];
           if (marker) {
             if (marker.circle) marker.circle.setMap(null);
