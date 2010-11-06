@@ -128,6 +128,9 @@ hermes.on('connection', function(id) {
 
   hermes.each(function(from, socket) {
     user.lookup(from, function(user) {
+      if (!user.position) {
+        user.update({ position: { latitude: 33.788, longitude: -84.289 }});
+      }
       hermes.position(id, user.id, user.position);
     });
   });
