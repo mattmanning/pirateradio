@@ -85,6 +85,12 @@ app.get('/assets/:name.js', function(request, response) {
   response.sendfile(js);
 });
 
+app.get('/assets/:name.png', function(request, response) {
+  var png = __dirname + '/assets/images/' + request.params.name + '.png';
+  response.headers['Content-Type'] = 'image/png';
+  response.sendfile(png);
+});
+
 /** ASTROLABE ***************************************************************/
 
 var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })

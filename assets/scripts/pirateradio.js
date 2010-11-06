@@ -144,8 +144,8 @@ function create_marker(data) {
         maxDistance: 2500000,
         color: '#000',
         activeColor: '#59b',
-        sizerIcon: new google.maps.MarkerImage('http://code.google.com/apis/maps/articles/mvcfun/resize-off.png'),
-        activeSizerIcon: new google.maps.MarkerImage('http://code.google.com/apis/maps/articles/mvcfun/resize.png')
+        sizerIcon: new google.maps.MarkerImage('assets/resize-off.png'),
+        activeSizerIcon: new google.maps.MarkerImage('assets/resize.png')
       });
 
     map.fitBounds(marker.get('bounds'));
