@@ -95,7 +95,8 @@ RadiusWidget.prototype = new google.maps.MVCObject();
 RadiusWidget.prototype.addSizer_ = function() {
   var sizer = new google.maps.Marker({
     draggable: true,
-    title: 'Drag me!'
+    title: 'Drag to change listening radius.',
+    cursor: 'col-resize'
   });
 
   sizer.bindTo('zIndex', this);
