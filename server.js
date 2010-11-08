@@ -177,11 +177,11 @@ var twitter = require('twitter-connect').createClient({
 /** MAIN ********************************************************************/
 
 if (process.env.SECURE) {
-  var privateKey = fs.readFileSync(__dirname + '/cert/selfsign.key').toString();
-  var certificate = fs.readFileSync(__dirname + '/cert/selfsign.pem').toString();
-  var credentials = crypto.createCredentials({key: privateKey, cert: certificate});
+  app.setSecure(crypto.createCredentials({
+    cert: fs.readFileSync(__dirname + '/cert/selfsign.pem').toString(),
+    key:  fs.readFileSync(__dirname + '/cert/selfsign.key').toString()
+  }));
 
-  app.setSecure(credentials);
   app.listen(443);
 } else {
   app.listen(process.env.PORT || 3000);
