@@ -37,7 +37,7 @@ $(window).ready(function() {
 
       switch(message.type) {
         case 'message':
-          var avatar = nearby[message.from] ? nearby[message.from].avatar : '/pr_anon-avatar_40x40.png';
+          var avatar = nearby[message.from].avatar || '/pr_anon-avatar_40x40.png';
 
           $('#log').append('                                                    \
             <div class="message">                                               \
@@ -58,7 +58,7 @@ $(window).ready(function() {
           break;
         case 'subscribe':
           nearby[message.id] = message.user;
-          var avatar = nearby[message.id] ? nearby[message.id].avatar : '/pr_anon-avatar_40x40.png';
+          var avatar = nearby[message.id].avatar || '/pr_anon-avatar_40x40.png';
           $('#userbar').append('<img class="' + message.id + '" src="' + avatar + '">');
           break;
         case 'unsubscribe':
