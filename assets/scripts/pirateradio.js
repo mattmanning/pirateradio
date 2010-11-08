@@ -142,12 +142,14 @@ function create_marker(data) {
   if(!data.me) {
     marker = markers[data.id] = new google.maps.Marker({
       position: latlng,
+      icon: '/images/pr_map-point-other_25x25.png',
       map: map
     });
   } else {
     marker = markers[data.id] = new DistanceWidget({
         position: latlng,
         map: map,
+        icon: '/images/pr_map-point-self_25x25.png',
         distance: 2000, // Starting distance in meters.
         maxDistance: 2500000,
         color: '#000',
