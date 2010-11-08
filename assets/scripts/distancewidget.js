@@ -1,6 +1,6 @@
 /**
  * A distance widget that will display a circle that can be resized and will
- * provide the radius in km.
+ * provide the radius in meters.
  *
  * @param {Object} opt_options Options such as map, position etc.
  *
