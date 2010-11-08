@@ -151,6 +151,7 @@ function create_marker(data) {
         distance: 2000, // Starting distance in meters.
         maxDistance: 2500000,
         color: '#000',
+        zIndex: 9999,
         activeColor: '#59b',
         sizerIcon: new google.maps.MarkerImage('/images/resize-off.png'),
         activeSizerIcon: new google.maps.MarkerImage('/images/resize.png')
