@@ -29,6 +29,7 @@ var app = express.createServer(
   express.bodyDecoder(),
   express.cookieDecoder(),
   express.session(),
+  express.staticProvider(__dirname + '/public'),
   identity({ cookie: '_pirate_radio_id' }),
   user.middleware({ host: 'localhost', port: 5984 })
 );
@@ -83,12 +84,6 @@ app.get('/assets/:name.js', function(request, response) {
   var js = __dirname + '/assets/scripts/' + request.params.name + '.js';
   response.headers['Content-Type'] = 'text/javascript';
   response.sendfile(js);
-});
-
-app.get('/assets/:name.png', function(request, response) {
-  var png = __dirname + '/assets/images/' + request.params.name + '.png';
-  response.headers['Content-Type'] = 'image/png';
-  response.sendfile(png);
 });
 
 /** ASTROLABE ***************************************************************/
