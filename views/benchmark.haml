@@ -1,0 +1,15 @@
+#header
+  %h1 piraterad.io benchmarks
+
+#content
+  #benchmark
+    #controls
+      Create
+      %input{ type: "text", id: "concurrent", size: 5, value: "100" }
+      concurrent clients and send
+      %input{ type: "text", id: "messages", size: 5, value: "1000" }
+      messages from each.
+      %input{ type: "button", id: "run_benchmark", value: "Run Benchmark" }
+    %table#data
+    
+    

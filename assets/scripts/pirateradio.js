@@ -5,7 +5,10 @@ var markers = {};
 var distanceWidget;
 var map;
 
-$(window).ready(function() {
+$(document).ready(function() {
+  if (!($('#map').length))
+    return;
+
   init_map();
   locate_user();
 

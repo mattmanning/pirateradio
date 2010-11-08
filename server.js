@@ -86,6 +86,12 @@ app.get('/assets/:name.js', function(request, response) {
   response.sendfile(js);
 });
 
+/** BENCHMARKS **************************************************************/
+
+app.get('/benchmark', function(request, response) {
+  response.render('benchmark.haml');
+});
+
 /** ASTROLABE ***************************************************************/
 
 var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })
