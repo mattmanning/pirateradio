@@ -37,6 +37,11 @@ $(window).ready(function() {
 
       switch(message.type) {
         case 'message':
+          if (!nearby[message.from]) {
+            // TODO: request user profile
+            return;
+          }
+
           var avatar = nearby[message.from].avatar || '/pr_anon-avatar_40x40.png';
 
           $('#log').append('                                                    \
