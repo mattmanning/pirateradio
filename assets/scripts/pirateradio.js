@@ -37,17 +37,19 @@ $(window).ready(function() {
 
       switch(message.type) {
         case 'message':
-          $('#log').append('                                              \
-            <div class="message">                                         \
-              <img class="avatar" src="' + nearby[message.from].avatar + '">                                        \
-              <div class="text">                                          \
-                <a class="name" href="#">' + nearby[message.from].name + '</a>         \
-                ' + message.text + '                                      \
-              </div>                                                      \
-              <div class="meta">                                          \
-                One hour ago                                              \
-              </div>                                                      \
-            </div>                                                        \
+          var avatar = nearby[message.from].avatar || '/pr_anon-avatar_40x40.png';
+
+          $('#log').append('                                                    \
+            <div class="message">                                               \
+              <img class="avatar" src="' + avatar + '">                         \
+              <div class="text">                                                \
+                <a class="name" href="#">' + nearby[message.from].name +  '</a> \
+                ' + message.text + '                                            \
+              </div>                                                            \
+              <div class="meta">                                                \
+                One hour ago                                                    \
+              </div>                                                            \
+            </div>                                                              \
           ');
           $('#log').scrollTop($('#log')[0].scrollHeight);
           break;
@@ -56,7 +58,8 @@ $(window).ready(function() {
           break;
         case 'subscribe':
           nearby[message.id] = message.user;
-          $('#userbar').append('<img class="' + message.id + '" src="' + message.user.avatar + '">');
+          var avatar = nearby[message.id].avatar || '/pr_anon-avatar_40x40.png';
+          $('#userbar').append('<img class="' + message.id + '" src="' + avatar + '">');
           break;
         case 'unsubscribe':
           $('#userbar .' + message.id).remove();
