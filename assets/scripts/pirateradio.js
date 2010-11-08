@@ -42,7 +42,7 @@ $(window).ready(function() {
             return;
           }
 
-          var avatar = nearby[message.from].avatar || '/pr_anon-avatar_40x40.png';
+          var avatar = nearby[message.from].avatar || '/images/pr_anon-avatar_40x40.png';
 
           $('#log').append('                                                    \
             <div class="message">                                               \
@@ -63,7 +63,7 @@ $(window).ready(function() {
           break;
         case 'subscribe':
           nearby[message.id] = message.user;
-          var avatar = nearby[message.id].avatar || '/pr_anon-avatar_40x40.png';
+          var avatar = nearby[message.id].avatar || '/images/pr_anon-avatar_36x36.png';
           $('#userbar').append('<img class="' + message.id + '" src="' + avatar + '">');
           break;
         case 'unsubscribe':
@@ -152,8 +152,8 @@ function create_marker(data) {
         maxDistance: 2500000,
         color: '#000',
         activeColor: '#59b',
-        sizerIcon: new google.maps.MarkerImage('/resize-off.png'),
-        activeSizerIcon: new google.maps.MarkerImage('/resize.png')
+        sizerIcon: new google.maps.MarkerImage('/images/resize-off.png'),
+        activeSizerIcon: new google.maps.MarkerImage('/images/resize.png')
       });
 
     map.fitBounds(marker.get('bounds'));
