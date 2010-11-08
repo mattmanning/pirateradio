@@ -2,9 +2,11 @@
   %h1 piraterad.io
   = identify_partial
   %a.button{ href: 'javascript:locate_user();' } Locate
+  %a.button{ href: 'javascript:feedbackDialog();' }Feedback
 
 #content
   #map
   #userbar
   #log
   %textarea#entry{ placeholder: 'Type your message here!' }
+  %iframe{ id: 'feedback', src: "https://spreadsheets.google.com/embeddedform?formkey=dFhfNkRpaUROcmpfZUVlRVE1QTVaQmc6MQ", width: "400", height: "630", frameborder: "0", marginheight: "0", marginwidth: "0" }

@@ -185,3 +185,13 @@ function init_map() {
     mapTypeId: google.maps.MapTypeId.ROADMAP
   });
 }
+
+function feedbackDialog() {
+  $('#feedback').dialog({
+    title: 'piraterad.io',
+    modal: true,
+    width: 400,
+    height: 630,
+    resizable: false
+  });
+}
