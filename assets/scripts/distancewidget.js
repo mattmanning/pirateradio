@@ -25,6 +25,7 @@ function DistanceWidget(opt_options) {
   marker.bindTo('zIndex', this);
   marker.bindTo('position', this);
   marker.bindTo('icon', this);
+  marker.bindTo('cursor', this);
 
   // Create a new radius widget
   var radiusWidget = new RadiusWidget(options['distance'] || 50);

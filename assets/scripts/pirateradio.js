@@ -163,6 +163,7 @@ function create_marker(data) {
     marker = markers[data.id] = new DistanceWidget({
         position: latlng,
         map: map,
+        cursor: 'move',
         icon: '/images/pr_map-point-self_25x25.png',
         distance: 2000, // Starting distance in meters.
         maxDistance: 2500000,
