@@ -151,33 +151,49 @@ function update_radius(radius) {
 
 function create_marker(data) {
   var latlng = new google.maps.LatLng(data.latitude, data.longitude);
+  var image;
   var marker;
 
   if(!data.me) {
+    image = new google.maps.MarkerImage('/images/pr_map-point-other_25x25.png',
+      new google.maps.Size(50,50),
+      new google.maps.Point(0,0),
+      new google.maps.Point(25,25));
     marker = markers[data.id] = new google.maps.Marker({
       position: latlng,
-      icon: '/images/pr_map-point-other_25x25.png',
+      icon: image,
       map: map
     });
   } else {
+    image = marker_image('/images/pr_map-point-self_25x25.png', 50);
+    var sizer  = marker_image('/images/resize-off.png', 16);
+    var active = marker_image('/images/resize.png', 16);
     marker = markers[data.id] = new DistanceWidget({
         position: latlng,
         map: map,
         cursor: 'move',
-        icon: '/images/pr_map-point-self_25x25.png',
+        icon: image,
         distance: 2000, // Starting distance in meters.
         maxDistance: 2500000,
         color: '#000',
         zIndex: 9999,
         activeColor: '#59b',
-        sizerIcon: new google.maps.MarkerImage('/images/resize-off.png'),
-        activeSizerIcon: new google.maps.MarkerImage('/images/resize.png')
+        sizerIcon: sizer,
+        activeSizerIcon: active
       });
 
     map.fitBounds(marker.get('bounds'));
   }
 
   return marker
+}
+
+function marker_image(file, side) {
+  var markerimage = new google.maps.MarkerImage(file,
+    new google.maps.Size(side,side),
+    new google.maps.Point(0,0),
+    new google.maps.Point(side/2,side/2));
+  return markerimage;
 }
 
 function update_marker(data) {
