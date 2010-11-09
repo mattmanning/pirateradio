@@ -52,6 +52,7 @@ function DistanceWidget(opt_options) {
   });
 
   google.maps.event.addListener(marker, 'dragend', function(event) {
+    console.log('rad: ', event);
     update_position(event.latLng.lat(), event.latLng.lng());
   });
 }
@@ -116,7 +117,7 @@ RadiusWidget.prototype.addSizer_ = function() {
 
   google.maps.event.addListener(sizer, 'dragend', function() {
     me.set('active', false);
-    update_radius();
+    update_radius(me.radius);
   });
 };
 

@@ -60,16 +60,19 @@ app.get('/auth/twitter', function(request, response) {
 app.post('/position', function(request, response) {
   var latitude  = parseFloat(request.body.latitude);
   var longitude = parseFloat(request.body.longitude);
-  log('post.position', { lat:latitude, long:longitude });
+  var radius    = parseFloat(request.body.radius);
+
+  log('post.position', { lat:latitude, long:longitude, rad:radius });
 
   request.user.update({
     position: {
       latitude:  latitude,
-      longitude: longitude
+      longitude: longitude,
+      radius:    radius
     }
   });
 
-  astrolabe.update(request.user.id, latitude, longitude);
+  astrolabe.update(request.user.id, latitude, longitude, radius);
 
   response.send('OK');
 });
@@ -90,10 +93,10 @@ app.get('/assets/:name.js', function(request, response) {
 
 var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })
 
-astrolabe.on('update', function(from, latitude, longitude) {
+astrolabe.on('update', function(from, latitude, longitude, radius) {
   log('astrolabe.on.update', { from:from })
   hermes.each(function(id, socket) {
-    hermes.position(id, from, { latitude:latitude, longitude:longitude });
+    hermes.position(id, from, { latitude:latitude, longitude:longitude, radius:radius });
   });
 });
 
@@ -122,15 +125,15 @@ hermes.on('connection', function(id) {
   log('hermes.on.connection', { id:id });
   user.lookup(id, function(user) {
     if (!user.position) {
-      user.update({ position: { latitude: 33.788, longitude: -84.289 }});
+      user.update({ position: { latitude: 33.788, longitude: -84.289, radius: 2000 }});
     }
-    astrolabe.update(user.id, user.position.latitude, user.position.longitude);
+    astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
   });
 
   hermes.each(function(from, socket) {
     user.lookup(from, function(user) {
       if (!user.position) {
-        user.update({ position: { latitude: 33.788, longitude: -84.289 }});
+        user.update({ position: { latitude: 33.788, longitude: -84.289, radius: 2000 }});
       }
       hermes.position(id, user.id, user.position);
     });

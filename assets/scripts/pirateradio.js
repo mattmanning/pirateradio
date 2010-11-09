@@ -59,6 +59,9 @@ $(window).ready(function() {
           $('#log').scrollTop($('#log')[0].scrollHeight);
           break;
         case 'position':
+          m_latitude = message.latitude;
+          m_longitude = message.longitude;
+          m_radius = message.radius;
           update_marker(message);
           break;
         case 'subscribe':
@@ -118,21 +121,32 @@ function position_error(message) {
   console.log('error: ' + message);
 }
 
+var m_latitude = null;
+var m_longitude = null;
+var m_radius = null;
+
 function update_position(latitude, longitude) {
   var coords = {
     latitude:  latitude,
-    longitude: longitude
+    longitude: longitude,
+    radius:    m_radius || 2000
   }
-
-  console.log(coords);
 
   $.post('/position', coords, function(data) {
     console.log(data);
   });
 }
 
-function update_radius() {
-  alert(distanceWidget.get('distance'));
+function update_radius(radius) {
+  var coords = {
+    latitude:  m_latitude,
+    longitude: m_longitude,
+    radius:    radius
+  }
+
+  $.post('/position', coords, function(data) {
+    console.log('posreturn: ', data);
+  });
 }
 
 function create_marker(data) {
