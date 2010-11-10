@@ -222,6 +222,7 @@ function init_map() {
   map = new google.maps.Map(mapDiv, {
     center: new google.maps.LatLng(33.75, -84.37),
     zoom: 8,
+    streetViewControl: false,
     mapTypeId: google.maps.MapTypeId.ROADMAP
   });
 
