@@ -89,9 +89,13 @@ app.get('/assets/:name.js', function(request, response) {
   response.sendfile(js);
 });
 
+/** ARCHIVE *****************************************************************/
+
+var archive = require('archive').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })
+
 /** ASTROLABE ***************************************************************/
 
-var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })
+var astrolabe = require('astrolabe').create()
 
 astrolabe.on('update', function(from, latitude, longitude, radius) {
   log('astrolabe.on.update', { from:from })
@@ -142,6 +146,10 @@ hermes.on('connection', function(id) {
 
 hermes.on('message', function(id, message) {
   log('hermes.on.message', { id:id, message:message });
+
+  user.lookup(id, function(user) {
+    archive.save(user, message);
+  })
 
   switch (message.type) {
     case 'message':
