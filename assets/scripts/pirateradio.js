@@ -9,6 +9,15 @@ $(window).ready(function() {
   init_map();
   locate_user();
 
+  function recalculate_times() {
+    $('.time').each(function() {
+      $(this).text($.timeago($(this).attr('date')));
+    });
+    window.setTimeout(recalculate_times, 5000);
+  }
+
+  recalculate_times();
+
   $('#entry').bind('keypress', function(ev) {
     if (ev.keyCode == 13) {
       send_message($('#entry').val());
@@ -52,7 +61,7 @@ $(window).ready(function() {
                 <a class="name" href="#">' + nearby[message.from].name +  '</a> \
                 ' + message.message.message + '                                 \
               </div>                                                            \
-              <div class="meta">                                                \
+              <div class="time" date="' + message.message.timestamp + '">       \
                 ' + $.timeago(message.message.timestamp) + '                    \
               </div>                                                            \
             </div>                                                              \
