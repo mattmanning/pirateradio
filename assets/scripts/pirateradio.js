@@ -53,7 +53,7 @@ $(window).ready(function() {
                 ' + message.message.message + '                                 \
               </div>                                                            \
               <div class="meta">                                                \
-                One hour ago                                                    \
+                ' + message.message.timestamp + '                               \
               </div>                                                            \
             </div>                                                              \
           ');
