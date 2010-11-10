@@ -79,7 +79,7 @@ $(window).ready(function() {
         case 'subscribe':
           nearby[message.id] = message.user;
           var avatar = nearby[message.id].avatar || '/images/pr_anon-avatar_36x36.png';
-          $('#userbar').append('<img class="' + message.id + '" src="' + avatar + '">');
+          $('#userbar').append('<img class="nearby_user ' + message.id + '" src="' + avatar + '">');
           break;
         case 'unsubscribe':
           $('#userbar .' + message.id).remove();
@@ -98,6 +98,7 @@ $(window).ready(function() {
     });
 
     socket.on('disconnect', function(data) {
+      $('.nearby_user').remove();
       console.log('disconnect');
       connected = false;
       persistent_connect();
