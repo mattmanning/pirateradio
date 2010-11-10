@@ -91,16 +91,23 @@ app.get('/assets/:name.js', function(request, response) {
 
 /** ASTROLABE ***************************************************************/
 
-var astrolabe = require('astrolabe').create({ psql:"host='127.0.0.1' dbname='pirateradio' user='pirateradio' password='radio'" })
+var astrolabe = require('astrolabe').create()
 
-astrolabe.on('update', function(from, latitude, longitude, radius) {
-  log('astrolabe.on.update', { from:from })
+astrolabe.on('update', function(err, result) {
+  var from      = result.from;
+  var latitude  = result.latitude;
+  var longitude = result.longitude;
+  var radius    = result.radius;
+
+  log('astrolabe.on.update', { from:from, lat:latitude, long:longitude })
   hermes.each(function(id, socket) {
     hermes.position(id, from, { latitude:latitude, longitude:longitude, radius:radius });
   });
 });
 
-astrolabe.on('connect', function(listener, poster) {
+astrolabe.on('connect', function(err, result) {
+  var listener = result.listener;
+  var poster   = result.poster;
   log('astrolabe.on.connect', { listener:listener, poster:poster });
   switchboard.endpoint(listener).subscribe(poster);
   user.lookup(poster, function(user) {
@@ -111,7 +118,9 @@ astrolabe.on('connect', function(listener, poster) {
   });
 });
 
-astrolabe.on('disconnect', function(listener, poster) {
+astrolabe.on('disconnect', function(err, result) {
+  var listener = result.listener;
+  var poster   = result.poster;
   log('astrolabe.on.disconnect', { listener:listener, poster:poster });
   switchboard.endpoint(listener).unsubscribe(poster);
   hermes.unsubscribe(listener, poster);
@@ -121,7 +130,9 @@ astrolabe.on('disconnect', function(listener, poster) {
 
 var hermes = require('hermes').create({ app:app });
 
-hermes.on('connection', function(id) {
+hermes.on('connection', function(err, result) {
+  var id = result.id;
+
   log('hermes.on.connection', { id:id });
   user.lookup(id, function(user) {
     if (!user.position) {
@@ -140,7 +151,10 @@ hermes.on('connection', function(id) {
   });
 });
 
-hermes.on('message', function(id, message) {
+hermes.on('message', function(err, result) {
+  var id = result.id;
+  var message = result.message;
+
   log('hermes.on.message', { id:id, message:message });
 
   switch (message.type) {
@@ -151,7 +165,9 @@ hermes.on('message', function(id, message) {
   }
 });
 
-hermes.on('disconnect', function(id) {
+hermes.on('disconnect', function(err, result) {
+  var id = result.id;
+
   log('hermes.on.disconnect', { id:id });
   astrolabe.remove(id);
   switchboard.endpoint(id).close();
@@ -161,7 +177,11 @@ hermes.on('disconnect', function(id) {
 
 var switchboard = require('switchboard').create();
 
-switchboard.on('message', function(from, to, message) {
+switchboard.on('message', function(err, result) {
+  var from = result.from;
+  var to = result.to;
+  var message = result.message;
+
   log('switchboard.on.message', { from:from, to:to, message:message });
   hermes.send(to, {
     type: 'message',
