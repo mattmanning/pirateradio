@@ -67,6 +67,7 @@ $(window).ready(function() {
               </div>                                                            \
             </div>                                                              \
           ');
+          $('#log .message:last').effect('highlight', {}, 1000);
           $('#log').scrollTop($('#log')[0].scrollHeight);
           break;
         case 'position':
