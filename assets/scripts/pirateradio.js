@@ -79,6 +79,7 @@ $(window).ready(function() {
             if (marker.circle) marker.circle.setMap(null);
             marker.setMap(null);
           }
+          $('#userbar .' + message.id).remove();
           delete markers[message.id];
           break;
       }
