@@ -146,7 +146,7 @@ hermes.on('message', function(id, message) {
   switch (message.type) {
     case 'message':
       log('hermes.message.message', { from:id, text:message.message });
-      switchboard.endpoint(id).publish(message.message);
+      switchboard.endpoint(id).publish(message);
       break;
   }
 });
@@ -166,7 +166,7 @@ switchboard.on('message', function(from, to, message) {
   hermes.send(to, {
     type: 'message',
     from: from,
-    text: message
+    message: message
   })
 })
 
