@@ -4,6 +4,7 @@ var nearby = {};
 var markers = {};
 var distanceWidget;
 var map;
+var otherimage;
 
 $(window).ready(function() {
   init_map();
@@ -152,21 +153,16 @@ function update_radius(radius) {
 
 function create_marker(data) {
   var latlng = new google.maps.LatLng(data.latitude, data.longitude);
-  var image;
   var marker;
 
   if(!data.me) {
-    image = new google.maps.MarkerImage('/images/pr_map-point-other_25x25.png',
-      new google.maps.Size(50,50),
-      new google.maps.Point(0,0),
-      new google.maps.Point(25,25));
     marker = markers[data.id] = new google.maps.Marker({
       position: latlng,
-      icon: image,
+      icon: otherimage,
       map: map
     });
   } else {
-    image = marker_image('/images/pr_map-point-self_25x25.png', 50);
+    var image  = marker_image('/images/pr_map-point-self_25x25.png', 50);
     var sizer  = marker_image('/images/resize-off.png', 16);
     var active = marker_image('/images/resize.png', 16);
     marker = markers[data.id] = new DistanceWidget({
@@ -218,6 +214,8 @@ function init_map() {
     zoom: 8,
     mapTypeId: google.maps.MapTypeId.ROADMAP
   });
+
+  otherimage = marker_image('/images/pr_map-point-other_25x25.png', 50);
 }
 
 function feedbackDialog() {
