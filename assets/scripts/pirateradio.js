@@ -44,12 +44,13 @@ $(window).ready(function() {
 
           var avatar = nearby[message.from].avatar || '/images/pr_anon-avatar_40x40.png';
 
+          // TODO: fix this
           $('#log').append('                                                    \
             <div class="message">                                               \
               <img class="avatar" src="' + avatar + '">                         \
               <div class="text">                                                \
                 <a class="name" href="#">' + nearby[message.from].name +  '</a> \
-                ' + message.text + '                                            \
+                ' + message.message.message + '                                 \
               </div>                                                            \
               <div class="meta">                                                \
                 One hour ago                                                    \
