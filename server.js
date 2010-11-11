@@ -151,8 +151,8 @@ hermes.on('connection', function(id, ip) {
         log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
         user.update({ position: { latitude:latitude, longitude:longitude, radius:2000 }});
         astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
-//      });
-    }
+      });
+//    }
     astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
   });
 
@@ -163,8 +163,8 @@ hermes.on('connection', function(id, ip) {
           log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
           user.update({ position: { latitude:latitude, longitude:longitude, radius:2000 }});
           astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
-//        });
-      }
+        });
+//      }
       hermes.position(id, user.id, user.position);
     });
   });
