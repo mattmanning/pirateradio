@@ -135,13 +135,20 @@ astrolabe.on('disconnect', function(listener, poster) {
   hermes.unsubscribe(listener, poster);
 });
 
+/** GEOIP *******************************************************************/
+
+var geoip = require('geoip').create();
+
 /** HERMES ******************************************************************/
 
 var hermes = require('hermes').create({ app:app });
 
-hermes.on('connection', function(id) {
-  log('hermes.on.connection', { id:id });
+hermes.on('connection', function(id, ip) {
+  log('hermes.on.connection', { id:id, ip:ip });
   user.lookup(id, function(user) {
+    geoip.lookup(ip, function(latitude, longitude) {
+      log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
+    });
     if (!user.position) {
       user.update({ position: { latitude: 33.788, longitude: -84.289, radius: 2000 }});
     }
