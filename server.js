@@ -146,19 +146,24 @@ var hermes = require('hermes').create({ app:app });
 hermes.on('connection', function(id, ip) {
   log('hermes.on.connection', { id:id, ip:ip });
   user.lookup(id, function(user) {
-    geoip.lookup(ip, function(latitude, longitude) {
-      log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
-    });
-    if (!user.position) {
-      user.update({ position: { latitude: 33.788, longitude: -84.289, radius: 2000 }});
+//    if (!user.position) {
+      geoip.lookup(ip, function(latitude, longitude) {
+        log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
+        user.update({ position: { latitude:latitude, longitude:longitude, radius:2000 }});
+        astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
+//      });
     }
     astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
   });
 
   hermes.each(function(from, socket) {
     user.lookup(from, function(user) {
-      if (!user.position) {
-        user.update({ position: { latitude: 33.788, longitude: -84.289, radius: 2000 }});
+//      if (!user.position) {
+        geoip.lookup(ip, function(latitude, longitude) {
+          log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
+          user.update({ position: { latitude:latitude, longitude:longitude, radius:2000 }});
+          astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
+//        });
       }
       hermes.position(id, user.id, user.position);
     });
