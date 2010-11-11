@@ -57,9 +57,9 @@ $(window).ready(function() {
           // TODO: fix this
           $('#log').append('                                                    \
             <div class="message">                                               \
-              <img class="avatar" src="' + avatar + '">                         \
+              <img class="avatar" src="' + user_avatar(message.from) + '">      \
               <div class="text">                                                \
-                <a class="name" href="#">' + nearby[message.from].name +  '</a> \
+                <a class="name" href="#">' + user_name(message.from) +  '</a>   \
                 ' + message.message.message + '                                 \
               </div>                                                            \
               <div class="time" date="' + message.message.timestamp + '">       \
@@ -172,6 +172,9 @@ function create_marker(data) {
       icon: otherimage,
       map: map
     });
+    google.maps.event.addListener(marker, 'mouseover', function(event) {
+      show_info(data.id);
+    });
   } else {
     var image  = marker_image('/images/pr_map-point-self_25x25.png', 50);
     var sizer  = marker_image('/images/resize-off.png', 16);
@@ -202,6 +205,39 @@ function marker_image(file, side) {
     new google.maps.Point(0,0),
     new google.maps.Point(side/2,side/2));
   return markerimage;
+}
+
+function user_name(id) {
+  if (nearby[id]) {
+    return nearby[id].name;
+  } else {
+    return "Unknown";
+  }
+}
+
+function user_avatar(id) {
+  var default_image = '/images/pr_anon-avatar_40x40.png';
+  if (nearby[id]) {
+    return nearby[id].avatar || default_image;
+  } else {
+    return default_image;
+  }
+}
+
+function show_info(id) {
+  var content = '<div id="user-info">'
+              + '<img src="'+user_avatar(id)+ '">'
+              + '<span class="name">'+user_name(id)+'</span>'
+              + '</div>';
+  var info = new google.maps.InfoWindow({
+    content: content,
+    pixelOffset: new google.maps.Size(0,25)
+  });
+  var marker = markers[id];
+  info.open(map, marker);
+  google.maps.event.addListener(marker, 'mouseout', function(event) {
+    info.close();
+  });
 }
 
 function update_marker(data) {
