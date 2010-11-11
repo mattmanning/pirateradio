@@ -132,6 +132,10 @@ hermes.on('connection', function(id) {
       user.update({ position: { latitude: 33.788, longitude: -84.289, radius: 2000 }});
     }
     astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
+    archive.catchup(user, function(message) {
+      log('archive.on.catchup', { to:user.id, from:message.from, message:message.message })
+      hermes.send(user.id, message);
+    });
   });
 
   hermes.each(function(from, socket) {
