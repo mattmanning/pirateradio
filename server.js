@@ -102,6 +102,20 @@ astrolabe.on('update', function(from, latitude, longitude, radius) {
   hermes.each(function(id, socket) {
     hermes.position(id, from, { latitude:latitude, longitude:longitude, radius:radius });
   });
+
+  user.lookup(from, function(user) {
+    archive.catchup(user, function(message) {
+      log('archive.on.catchup', { to:user.id, from:message.from, message:message.message })
+      hermes.send(user.id, {
+        type: 'message',
+        from: message.from,
+        message: {
+          message: message.message,
+          timestamp: message.timestamp
+        }
+      });
+    });
+  })
 });
 
 astrolabe.on('connect', function(listener, poster) {
@@ -132,10 +146,6 @@ hermes.on('connection', function(id) {
       user.update({ position: { latitude: 33.788, longitude: -84.289, radius: 2000 }});
     }
     astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
-    archive.catchup(user, function(message) {
-      log('archive.on.catchup', { to:user.id, from:message.from, message:message.message })
-      hermes.send(user.id, message);
-    });
   });
 
   hermes.each(function(from, socket) {

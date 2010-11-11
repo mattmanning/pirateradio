@@ -47,12 +47,12 @@ $(window).ready(function() {
 
       switch(message.type) {
         case 'message':
-          if (!nearby[message.from]) {
-            // TODO: request user profile
-            return;
-          }
+          // if (!nearby[message.from]) {
+          //   // TODO: request user profile
+          //   return;
+          // }
 
-          var avatar = nearby[message.from].avatar || '/images/pr_anon-avatar_40x40.png';
+          //var avatar = nearby[message.from].avatar || '/images/pr_anon-avatar_40x40.png';
 
           // TODO: fix this
           $('#log').append('                                                    \
@@ -99,6 +99,7 @@ $(window).ready(function() {
 
     socket.on('disconnect', function(data) {
       $('.nearby_user').remove();
+      clear_messages();
       console.log('disconnect');
       connected = false;
       persistent_connect();
@@ -146,6 +147,8 @@ function update_position(latitude, longitude) {
     radius:    m_radius || 2000
   }
 
+  clear_messages();
+
   $.post('/position', coords, function(data) {
     console.log(data);
   });
@@ -157,6 +160,8 @@ function update_radius(radius) {
     longitude: m_longitude,
     radius:    radius
   }
+
+  clear_messages();
 
   $.post('/position', coords, function(data) {
     console.log('posreturn: ', data);
@@ -275,4 +280,8 @@ function feedbackDialog() {
     height: 630,
     resizable: false
   });
+}
+
+function clear_messages() {
+  $('.message').remove();
 }
