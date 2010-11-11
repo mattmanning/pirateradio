@@ -146,25 +146,25 @@ var hermes = require('hermes').create({ app:app });
 hermes.on('connection', function(id, ip) {
   log('hermes.on.connection', { id:id, ip:ip });
   user.lookup(id, function(user) {
-//    if (!user.position) {
+    if (!user.position) {
       geoip.lookup(ip, function(latitude, longitude) {
         log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
         user.update({ position: { latitude:latitude, longitude:longitude, radius:2000 }});
         astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
       });
-//    }
+    }
     astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
   });
 
   hermes.each(function(from, socket) {
     user.lookup(from, function(user) {
-//      if (!user.position) {
+      if (!user.position) {
         geoip.lookup(ip, function(latitude, longitude) {
           log('geoip.on.lookup', { latitude:latitude, longitude:longitude });
           user.update({ position: { latitude:latitude, longitude:longitude, radius:2000 }});
           astrolabe.update(user.id, user.position.latitude, user.position.longitude, user.position.radius);
         });
-//      }
+      }
       hermes.position(id, user.id, user.position);
     });
   });
