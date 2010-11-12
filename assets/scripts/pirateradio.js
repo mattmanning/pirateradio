@@ -237,7 +237,7 @@ function show_info(id) {
               + '</div>';
   var info = new google.maps.InfoWindow({
     content: content,
-    pixelOffset: new google.maps.Size(0,25)
+    pixelOffset: new google.maps.Size(0,13)
   });
   var marker = markers[id];
   info.open(map, marker);
